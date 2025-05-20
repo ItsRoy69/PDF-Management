@@ -25,8 +25,19 @@ export const authService = {
   },
 
   login: async (data: { email: string; password: string }) => {
-    const response = await api.post('/auth/login', data);
-    return response.data;
+    console.log('Making login API request with data:', { ...data, password: '[REDACTED]' });
+    try {
+      const response = await api.post('/auth/login', data);
+      console.log('Login API response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Login API error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+      throw error;
+    }
   },
 };
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,7 @@ const validationSchema = Yup.object({
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
+  const [error, setError] = useState<string>('');
 
   const formik = useFormik({
     initialValues: {
@@ -34,10 +35,14 @@ const Register = () => {
     validationSchema,
     onSubmit: async (values) => {
       try {
+        console.log('Starting registration process with email:', values.email);
+        setError('');
         await register(values.name, values.email, values.password);
+        console.log('Registration successful, navigating to dashboard');
         navigate('/dashboard');
-      } catch (error) {
+      } catch (error: any) {
         console.error('Registration failed:', error);
+        setError(error.response?.data?.error || 'Registration failed. Please try again.');
       }
     },
   });
@@ -48,6 +53,11 @@ const Register = () => {
         <Typography variant="h4" align="center" gutterBottom>
           Register
         </Typography>
+        {error && (
+          <Typography color="error" align="center" sx={{ mb: 2 }}>
+            {error}
+          </Typography>
+        )}
         <form onSubmit={formik.handleSubmit}>
           <TextField
             fullWidth

@@ -26,10 +26,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [token]);
 
   const login = async (email: string, password: string) => {
-    const data = await authService.login({ email, password });
-    setUser(data.user);
-    setToken(data.token);
-    setIsAuthenticated(true);
+    try {
+      console.log('Attempting login with email:', email);
+      const data = await authService.login({ email, password });
+      console.log('Login successful, received data:', data);
+      setUser(data.user);
+      setToken(data.token);
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error('Login error details:', error);
+      throw error;
+    }
   };
 
   const register = async (name: string, email: string, password: string) => {
