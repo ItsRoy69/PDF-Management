@@ -16,7 +16,7 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction) 
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const user = await User.findOne({ _id: (decoded as any)._id });
+    const user = await User.findOne({ _id: (decoded as any).userId });
 
     if (!user) {
       throw new Error();
