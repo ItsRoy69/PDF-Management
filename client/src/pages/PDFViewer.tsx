@@ -87,6 +87,7 @@ const PDFViewer = () => {
   const [inviteEmails, setInviteEmails] = useState<string[]>([]);
   const [tabValue, setTabValue] = useState(0);
   const [invitedUsers, setInvitedUsers] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
     loadPDF();
@@ -125,12 +126,19 @@ const PDFViewer = () => {
   };
 
   const handleAddComment = async () => {
+    if (isSubmitting || !comment.trim()) return;
+    
     try {
+      setIsSubmitting(true);
       await pdfService.addComment(id!, comment);
       setComment('');
-      loadPDF();
+      await loadPDF();
     } catch (error) {
       console.error('Failed to add comment:', error);
+      setSnackbarMessage('Failed to add comment');
+      setSnackbarOpen(true);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -139,7 +147,10 @@ const PDFViewer = () => {
       await pdfService.addReply(id!, commentId, reply);
       setReply('');
       setSelectedComment(null);
-      loadPDF();
+      // Add a small delay before reloading to prevent race conditions
+      setTimeout(() => {
+        loadPDF();
+      }, 500);
     } catch (error) {
       console.error('Failed to add reply:', error);
     }
@@ -328,8 +339,12 @@ const PDFViewer = () => {
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Add a comment..."
               />
-              <button className="pdf-viewer-button" onClick={handleAddComment}>
-                Add Comment
+              <button 
+                className="pdf-viewer-button" 
+                onClick={handleAddComment}
+                disabled={isSubmitting || !comment.trim()}
+              >
+                {isSubmitting ? 'Adding...' : 'Add Comment'}
               </button>
 
               <ul className="comment-list">

@@ -201,9 +201,10 @@ export const addComment = async (req: AuthRequest, res: Response): Promise<void>
 
 export const addReply = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { text, commentId } = req.body;
+    const { text } = req.body;
+    const { id, commentId } = req.params;
     const pdf = await PDF.findOne({
-      _id: req.params.id,
+      _id: id,
       $or: [
         { owner: req.user!._id },
         { sharedWith: req.user!._id }

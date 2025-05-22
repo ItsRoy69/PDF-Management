@@ -90,7 +90,7 @@ export const pdfService = {
   },
 
   addReply: async (id: string, commentId: string, text: string) => {
-    const response = await api.post(`/pdf/${id}/comments/${commentId}/replies`, { text });
+    const response = await api.post(`/pdf/${id}/comments/${commentId}/replies`, { text, commentId });
     return response.data;
   },
 
