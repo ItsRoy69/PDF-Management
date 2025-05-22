@@ -84,8 +84,24 @@ export const pdfService = {
     return response.data.link;
   },
 
-  getSharedPDF: async (token: string) => {
-    const response = await api.get(`/pdf/shared/${token}`);
+  inviteUsers: async (id: string, emails: string[]) => {
+    const response = await api.post(`/pdf/${id}/invite`, { emails });
+    return response.data;
+  },
+
+  getInvitedUsers: async (id: string) => {
+    const response = await api.get(`/pdf/${id}/invited`);
+    return response.data;
+  },
+
+  removeInvitedUser: async (id: string, email: string) => {
+    const response = await api.delete(`/pdf/${id}/invited/${email}`);
+    return response.data;
+  },
+
+  getSharedPDF: async (token: string, email?: string) => {
+    const params = email ? { email } : {};
+    const response = await api.get(`/pdf/shared/${token}`, { params });
     return response.data;
   },
 

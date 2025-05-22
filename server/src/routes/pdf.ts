@@ -12,7 +12,10 @@ import {
   getSharedPDF,
   addSharedComment,
   addSharedReply,
-  proxyPdfFile
+  proxyPdfFile,
+  inviteUsersByEmail,
+  getInvitedUsers,
+  removeInvitedEmail
 } from '../controllers/pdfController';
 
 const router = express.Router();
@@ -49,5 +52,8 @@ router.post('/:id/share', sharePDF as RequestHandler);
 router.post('/:id/comments', addComment as RequestHandler);
 router.post('/:id/comments/:commentId/replies', addReply as RequestHandler);
 router.post('/:id/share-link', generateShareLink as RequestHandler);
+router.post('/:id/invite', inviteUsersByEmail as RequestHandler);
+router.get('/:id/invited', getInvitedUsers as RequestHandler);
+router.delete('/:id/invited/:email', removeInvitedEmail as RequestHandler);
 
 export default router; 

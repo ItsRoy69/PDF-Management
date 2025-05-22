@@ -19,6 +19,10 @@ import {
   Alert,
   CircularProgress,
   Link,
+  Chip,
+  IconButton,
+  Tab,
+  Tabs,
 } from '@mui/material';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfService } from '../services/api';
@@ -27,6 +31,9 @@ import ShareIcon from '@mui/icons-material/Share';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import EmailIcon from '@mui/icons-material/Email';
+import DeleteIcon from '@mui/icons-material/Delete';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 // Use local worker
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -54,6 +61,7 @@ interface PDFData {
   title: string;
   fileUrl: string;
   comments: Comment[];
+  invitedEmails?: string[];
 }
 
 const PDFViewer = () => {
@@ -71,9 +79,20 @@ const PDFViewer = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(true);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteEmails, setInviteEmails] = useState<string[]>([]);
+  const [tabValue, setTabValue] = useState(0);
+  const [invitedUsers, setInvitedUsers] = useState<string[]>([]);
   
   useEffect(() => {
     loadPDF();
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      loadInvitedUsers();
+    }
   }, [id]);
 
   const loadPDF = async () => {
@@ -90,6 +109,15 @@ const PDFViewer = () => {
       setPdfError(`Failed to load PDF data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setPdfLoading(false);
+    }
+  };
+
+  const loadInvitedUsers = async () => {
+    try {
+      const data = await pdfService.getInvitedUsers(id!);
+      setInvitedUsers(data.invitedEmails || []);
+    } catch (error) {
+      console.error('Failed to load invited users:', error);
     }
   };
 
@@ -117,7 +145,12 @@ const PDFViewer = () => {
   const handleShareClick = async () => {
     try {
       const link = await pdfService.generateShareLink(id!);
-      setShareLink(link);
+      
+      const fullLink = link.startsWith('http') 
+        ? link 
+        : `${window.location.origin}${link.startsWith('/') ? '' : '/'}${link}`;
+      
+      setShareLink(fullLink);
       setShareDialogOpen(true);
     } catch (error) {
       console.error('Failed to generate share link:', error);
@@ -183,6 +216,57 @@ const PDFViewer = () => {
     standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`
   }), []);
 
+  const handleInviteClick = () => {
+    setInviteEmail('');
+    setInviteEmails([]);
+    setInviteDialogOpen(true);
+  };
+
+  const handleAddEmail = () => {
+    if (inviteEmail && !inviteEmails.includes(inviteEmail)) {
+      setInviteEmails([...inviteEmails, inviteEmail]);
+      setInviteEmail('');
+    }
+  };
+
+  const handleRemoveEmail = (email: string) => {
+    setInviteEmails(inviteEmails.filter(e => e !== email));
+  };
+
+  const handleInviteUsers = async () => {
+    if (inviteEmails.length === 0) return;
+    
+    try {
+      const result = await pdfService.inviteUsers(id!, inviteEmails);
+      setShareLink(result.link);
+      setInviteDialogOpen(false);
+      setSnackbarMessage(`Successfully invited ${inviteEmails.length} user(s)`);
+      setSnackbarOpen(true);
+      loadInvitedUsers();
+    } catch (error) {
+      console.error('Failed to invite users:', error);
+      setSnackbarMessage('Failed to invite users');
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleRemoveInvitedUser = async (email: string) => {
+    try {
+      await pdfService.removeInvitedUser(id!, email);
+      setInvitedUsers(invitedUsers.filter(e => e !== email));
+      setSnackbarMessage('User removed successfully');
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error('Failed to remove invited user:', error);
+      setSnackbarMessage('Failed to remove user');
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
   return (
     <Container>
       <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 3 }}>
@@ -196,7 +280,15 @@ const PDFViewer = () => {
                 onClick={handleShareClick}
                 sx={{ mr: 1 }}
               >
-                Share
+                Share Link
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<PersonAddIcon />}
+                onClick={handleInviteClick}
+                sx={{ mr: 1 }}
+              >
+                Invite Users
               </Button>
               {pdfError && (
                 <Button
@@ -244,77 +336,131 @@ const PDFViewer = () => {
           )}
         </Paper>
         <Paper elevation={3} sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Comments
-          </Typography>
-          <Box sx={{ mb: 2 }}>
-            <TextField
-              fullWidth
-              multiline
-              rows={2}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Add a comment..."
-            />
-            <Button
-              variant="contained"
-              onClick={handleAddComment}
-              sx={{ mt: 1 }}
-            >
-              Add Comment
-            </Button>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+            <Tabs value={tabValue} onChange={handleTabChange}>
+              <Tab label="Comments" />
+              <Tab label="Invited Users" />
+            </Tabs>
           </Box>
-          <List>
-            {pdf?.comments.map((comment: Comment) => (
-              <React.Fragment key={comment._id}>
-                <ListItem>
-                  <ListItemText
-                    primary={comment.text}
-                    secondary={`${comment.user.name} - ${new Date(
-                      comment.createdAt
-                    ).toLocaleString()}`}
-                  />
-                </ListItem>
-                {comment.replies.map((reply, index) => (
-                  <ListItem key={index} sx={{ pl: 4 }}>
-                    <ListItemText
-                      primary={reply.text}
-                      secondary={`${reply.user.name} - ${new Date(
-                        reply.createdAt
-                      ).toLocaleString()}`}
-                    />
-                  </ListItem>
+          
+          {tabValue === 0 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Comments
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Add a comment..."
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleAddComment}
+                  sx={{ mt: 1 }}
+                >
+                  Add Comment
+                </Button>
+              </Box>
+              <List>
+                {pdf?.comments.map((comment: Comment) => (
+                  <React.Fragment key={comment._id}>
+                    <ListItem>
+                      <ListItemText
+                        primary={comment.text}
+                        secondary={`${comment.user.name} - ${new Date(
+                          comment.createdAt
+                        ).toLocaleString()}`}
+                      />
+                    </ListItem>
+                    {comment.replies.map((reply, index) => (
+                      <ListItem key={index} sx={{ pl: 4 }}>
+                        <ListItemText
+                          primary={reply.text}
+                          secondary={`${reply.user.name} - ${new Date(
+                            reply.createdAt
+                          ).toLocaleString()}`}
+                        />
+                      </ListItem>
+                    ))}
+                    {selectedComment === comment._id ? (
+                      <Box sx={{ pl: 4 }}>
+                        <TextField
+                          fullWidth
+                          multiline
+                          rows={2}
+                          value={reply}
+                          onChange={(e) => setReply(e.target.value)}
+                          placeholder="Add a reply..."
+                        />
+                        <Button
+                          variant="contained"
+                          onClick={() => handleAddReply(comment._id)}
+                          sx={{ mt: 1 }}
+                        >
+                          Add Reply
+                        </Button>
+                      </Box>
+                    ) : (
+                      <Button
+                        onClick={() => setSelectedComment(comment._id)}
+                        sx={{ pl: 4 }}
+                      >
+                        Reply
+                      </Button>
+                    )}
+                    <Divider />
+                  </React.Fragment>
                 ))}
-                {selectedComment === comment._id ? (
-                  <Box sx={{ pl: 4 }}>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={2}
-                      value={reply}
-                      onChange={(e) => setReply(e.target.value)}
-                      placeholder="Add a reply..."
-                    />
-                    <Button
-                      variant="contained"
-                      onClick={() => handleAddReply(comment._id)}
-                      sx={{ mt: 1 }}
+              </List>
+            </Box>
+          )}
+          
+          {tabValue === 1 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Invited Users
+              </Typography>
+              {invitedUsers.length > 0 ? (
+                <List>
+                  {invitedUsers.map((email) => (
+                    <ListItem 
+                      key={email}
+                      secondaryAction={
+                        <IconButton 
+                          edge="end" 
+                          aria-label="delete"
+                          onClick={() => handleRemoveInvitedUser(email)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      }
                     >
-                      Add Reply
-                    </Button>
-                  </Box>
-                ) : (
-                  <Button
-                    onClick={() => setSelectedComment(comment._id)}
-                    sx={{ pl: 4 }}
-                  >
-                    Reply
-                  </Button>
-                )}
-                <Divider />
-              </React.Fragment>
-            ))}
-          </List>
+                      <ListItemText 
+                        primary={email}
+                        secondary="Invited by email"
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography variant="body1">
+                  No users have been invited by email yet.
+                </Typography>
+              )}
+              <Button
+                variant="contained"
+                startIcon={<PersonAddIcon />}
+                onClick={handleInviteClick}
+                sx={{ mt: 2 }}
+              >
+                Invite More Users
+              </Button>
+            </Box>
+          )}
         </Paper>
       </Box>
 
@@ -341,6 +487,51 @@ const PDFViewer = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShareDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={inviteDialogOpen} onClose={() => setInviteDialogOpen(false)}>
+        <DialogTitle>Invite Users by Email</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Enter email addresses to invite users to access this PDF:
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Email Address"
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="example@email.com"
+            />
+            <Button
+              startIcon={<EmailIcon />}
+              onClick={handleAddEmail}
+              sx={{ ml: 1 }}
+            >
+              Add
+            </Button>
+          </Box>
+          <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {inviteEmails.map(email => (
+              <Chip 
+                key={email} 
+                label={email} 
+                onDelete={() => handleRemoveEmail(email)} 
+              />
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setInviteDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleInviteUsers} 
+            variant="contained"
+            disabled={inviteEmails.length === 0}
+          >
+            Invite
+          </Button>
         </DialogActions>
       </Dialog>
 

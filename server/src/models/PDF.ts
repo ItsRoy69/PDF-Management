@@ -7,7 +7,9 @@ export interface IPDF extends mongoose.Document {
   fileUrl: string;
   owner: mongoose.Types.ObjectId;
   sharedWith: mongoose.Types.ObjectId[];
+  invitedEmails: string[];
   shareToken?: string;
+  accessTokens?: string[];
   comments: {
     text: string;
     user: mongoose.Types.ObjectId;
@@ -47,11 +49,18 @@ const pdfSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }],
+  invitedEmails: [{
+    type: String,
+    trim: true
+  }],
   shareToken: {
     type: String,
     unique: true,
     sparse: true
   },
+  accessTokens: [{
+    type: String
+  }],
   comments: [{
     text: {
       type: String,
