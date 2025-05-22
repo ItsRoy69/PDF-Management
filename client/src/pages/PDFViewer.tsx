@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { pdfService } from '../services/api';
 import ShareIcon from '@mui/icons-material/Share';
@@ -96,6 +96,7 @@ const PDFViewer = () => {
     try {
       const data = await pdfService.getInvitedUsers(id!);
       setInvitedUsers(data.invitedEmails || []);
+      console.log('Loaded invited users:', data.invitedEmails);
     } catch (error) {
       console.error('Failed to load invited users:', error);
     }
@@ -447,6 +448,33 @@ const PDFViewer = () => {
                     <ContentCopyIcon /> Copy
                   </button>
                 </div>
+                {invitedUsers.length > 0 && (
+                  <div style={{ marginTop: '1.5rem' }}>
+                    <p>Users with access:</p>
+                    <div style={{ 
+                      display: 'flex', 
+                      flexWrap: 'wrap', 
+                      gap: '0.5rem', 
+                      marginTop: '0.5rem',
+                      maxHeight: '150px',
+                      overflowY: 'auto'
+                    }}>
+                      {invitedUsers.map(email => (
+                        <div
+                          key={email}
+                          style={{
+                            background: '#f1f5f9',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          {email}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="dialog-actions">
                 <button className="pdf-viewer-button secondary" onClick={() => setShareDialogOpen(false)}>

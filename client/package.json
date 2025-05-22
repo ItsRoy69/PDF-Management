@@ -14,13 +14,10 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^7.1.0",
     "@mui/material": "^7.1.0",
-    "@types/react-pdf": "^7.0.0",
     "axios": "^1.9.0",
     "formik": "^2.4.6",
-    "pdfjs-dist": "^5.2.133",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-pdf": "^9.2.1",
     "react-router-dom": "^7.6.0",
     "yup": "^1.6.1"
   },
