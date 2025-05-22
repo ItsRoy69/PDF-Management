@@ -13,11 +13,17 @@ export interface IPDF extends mongoose.Document {
   accessTokens?: string[];
   comments: {
     text: string;
-    user: mongoose.Types.ObjectId;
+    user: mongoose.Types.ObjectId | {
+      name: string;
+      email: string;
+    };
     createdAt: Date;
     replies?: {
       text: string;
-      user: mongoose.Types.ObjectId;
+      user: mongoose.Types.ObjectId | {
+        name: string;
+        email: string;
+      };
       createdAt: Date;
     }[];
   }[];
@@ -72,8 +78,7 @@ const pdfSchema = new mongoose.Schema({
       required: true
     },
     user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      type: mongoose.Schema.Types.Mixed,
       required: true
     },
     createdAt: {
@@ -86,8 +91,7 @@ const pdfSchema = new mongoose.Schema({
         required: true
       },
       user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        type: mongoose.Schema.Types.Mixed,
         required: true
       },
       createdAt: {

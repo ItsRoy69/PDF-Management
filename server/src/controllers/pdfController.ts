@@ -462,20 +462,21 @@ export const addSharedComment = async (req: Request, res: Response): Promise<voi
       return;
     }
 
-    const guestUser: GuestUser = {
+    const guestUser = {
       name: guestName,
       email: `guest-${Date.now()}@example.com`
     };
 
     pdf.comments.push({
       text,
-      user: guestUser as any, // Type assertion needed since we're using a simplified user object
+      user: guestUser,
       createdAt: new Date()
     });
 
     await pdf.save();
     res.json(pdf);
   } catch (error) {
+    console.error('Failed to add comment:', error);
     res.status(500).json({ error: 'Failed to add comment' });
   }
 };
@@ -501,20 +502,21 @@ export const addSharedReply = async (req: Request, res: Response): Promise<void>
       comment.replies = [];
     }
 
-    const guestUser: GuestUser = {
+    const guestUser = {
       name: guestName,
       email: `guest-${Date.now()}@example.com`
     };
 
     comment.replies.push({
       text,
-      user: guestUser as any, // Type assertion needed since we're using a simplified user object
+      user: guestUser,
       createdAt: new Date()
     });
 
     await pdf.save();
     res.json(pdf);
   } catch (error) {
+    console.error('Failed to add reply:', error);
     res.status(500).json({ error: 'Failed to add reply' });
   }
 };
