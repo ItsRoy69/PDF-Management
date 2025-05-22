@@ -1,6 +1,5 @@
 import express, { RequestHandler } from 'express';
 import multer from 'multer';
-import path from 'path';
 import { auth } from '../middleware/auth';
 import {
   uploadPDF,
@@ -17,19 +16,9 @@ import {
 
 const router = express.Router();
 
-// Configure multer for PDF upload
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads'));
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
+// Configure multer for memory storage
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
       cb(null, true);
@@ -49,9 +38,9 @@ router.post('/upload', upload.single('pdf'), uploadPDF as RequestHandler);
 router.get('/', getPDFs as RequestHandler);
 router.get('/:id', getPDF as RequestHandler);
 router.post('/:id/share', sharePDF as RequestHandler);
-router.post('/:id/share-link', generateShareLink as RequestHandler);
 router.post('/:id/comments', addComment as RequestHandler);
 router.post('/:id/comments/:commentId/replies', addReply as RequestHandler);
+router.post('/:id/share-link', generateShareLink as RequestHandler);
 
 // Public routes for shared PDFs
 router.get('/shared/:token', getSharedPDF as RequestHandler);

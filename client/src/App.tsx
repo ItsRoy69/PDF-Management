@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import PDFViewer from './pages/PDFViewer';
 import SharedPDF from './pages/SharedPDF';
+import Upload from './pages/Upload';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -31,6 +32,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="upload"
+                element={
+                  <PrivateRoute>
+                    <Upload />
                   </PrivateRoute>
                 }
               />

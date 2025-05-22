@@ -4,7 +4,7 @@ export interface IPDF extends mongoose.Document {
   title: string;
   filename: string;
   originalName: string;
-  path: string;
+  fileUrl: string;
   owner: mongoose.Types.ObjectId;
   sharedWith: mongoose.Types.ObjectId[];
   shareToken?: string;
@@ -34,7 +34,7 @@ const pdfSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  path: {
+  fileUrl: {
     type: String,
     required: true
   },

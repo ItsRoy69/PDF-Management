@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import mongoose from 'mongoose';
+import appwriteUpload from '../utils/appwriteUpload';
 
 interface AuthRequest extends Request {
   user?: {
@@ -38,18 +39,34 @@ export const uploadPDF = async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
+    if (!req.user) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    // Convert file buffer to base64
+    const base64String = `data:application/pdf;base64,${req.file.buffer.toString('base64')}`;
+    
+    // Upload to Appwrite
+    const fileUrl = await appwriteUpload.saveFile(base64String);
+
     const pdf = new PDF({
       title: req.body.title || req.file.originalname,
-      filename: req.file.filename,
+      filename: req.file.originalname,
       originalName: req.file.originalname,
-      path: req.file.path,
-      owner: req.user!._id
+      fileUrl: fileUrl,
+      owner: req.user._id
     });
 
     await pdf.save();
     res.status(201).json(pdf);
   } catch (error) {
-    res.status(400).json({ error: 'Upload failed' });
+    console.error('PDF upload error:', error);
+    if (error instanceof Error) {
+      res.status(500).json({ error: `Upload failed: ${error.message}` });
+    } else {
+      res.status(500).json({ error: 'Upload failed: An unexpected error occurred' });
+    }
   }
 };
 
