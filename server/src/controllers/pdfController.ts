@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
 import { PDF, IPDF } from '../models/PDF';
 import { User, IUser } from '../models/User';
-import path from 'path';
-import fs from 'fs';
 import crypto from 'crypto';
 import mongoose from 'mongoose';
 import appwriteUpload from '../utils/appwriteUpload';
@@ -26,12 +24,28 @@ interface GuestUser {
 interface Comment {
   _id: mongoose.Types.ObjectId;
   text: string;
-  user: mongoose.Types.ObjectId | GuestUser;
+  user: mongoose.Types.ObjectId | {
+    name: string;
+    email: string;
+  };
   createdAt: Date;
-  replies: {
+  replies?: {
+    _id: mongoose.Types.ObjectId;
     text: string;
-    user: mongoose.Types.ObjectId | GuestUser;
+    user: mongoose.Types.ObjectId | {
+      name: string;
+      email: string;
+    };
     createdAt: Date;
+    replies?: {
+      _id: mongoose.Types.ObjectId;
+      text: string;
+      user: mongoose.Types.ObjectId | {
+        name: string;
+        email: string;
+      };
+      createdAt: Date;
+    }[];
   }[];
 }
 
@@ -186,12 +200,15 @@ export const addComment = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    pdf.comments.push({
+    const newComment = {
+      _id: new mongoose.Types.ObjectId(),
       text,
       user: req.user!._id,
-      createdAt: new Date()
-    });
+      createdAt: new Date(),
+      replies: []
+    };
 
+    pdf.comments.push(newComment);
     await pdf.save();
     res.json(pdf);
   } catch (error) {
@@ -226,12 +243,15 @@ export const addReply = async (req: AuthRequest, res: Response): Promise<void> =
       comment.replies = [];
     }
 
-    comment.replies.push({
+    const newReply = {
+      _id: new mongoose.Types.ObjectId(),
       text,
       user: req.user!._id,
-      createdAt: new Date()
-    });
+      createdAt: new Date(),
+      replies: []
+    };
 
+    comment.replies.push(newReply);
     await pdf.save();
     res.json(pdf);
   } catch (error) {
@@ -468,12 +488,15 @@ export const addSharedComment = async (req: Request, res: Response): Promise<voi
       email: `guest-${Date.now()}@example.com`
     };
 
-    pdf.comments.push({
+    const newComment = {
+      _id: new mongoose.Types.ObjectId(),
       text,
       user: guestUser,
-      createdAt: new Date()
-    });
+      createdAt: new Date(),
+      replies: []
+    };
 
+    pdf.comments.push(newComment);
     await pdf.save();
     res.json(pdf);
   } catch (error) {
@@ -509,6 +532,7 @@ export const addSharedReply = async (req: Request, res: Response): Promise<void>
     };
 
     comment.replies.push({
+      _id: new mongoose.Types.ObjectId(),
       text,
       user: guestUser,
       createdAt: new Date()
@@ -519,6 +543,101 @@ export const addSharedReply = async (req: Request, res: Response): Promise<void>
   } catch (error) {
     console.error('Failed to add reply:', error);
     res.status(500).json({ error: 'Failed to add reply' });
+  }
+};
+
+export const addNestedReply = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { text } = req.body;
+    const { id, commentId, replyId } = req.params;
+    const pdf = await PDF.findOne({
+      _id: id,
+      $or: [
+        { owner: req.user!._id },
+        { sharedWith: req.user!._id }
+      ]
+    });
+
+    if (!pdf) {
+      res.status(404).json({ error: 'PDF not found' });
+      return;
+    }
+
+    const comment = (pdf.comments as Comment[]).find(c => c._id.toString() === commentId);
+    if (!comment) {
+      res.status(404).json({ error: 'Comment not found' });
+      return;
+    }
+
+    const parentReply = comment.replies?.find(r => r._id.toString() === replyId);
+    if (!parentReply) {
+      res.status(404).json({ error: 'Reply not found' });
+      return;
+    }
+
+    if (!parentReply.replies) {
+      parentReply.replies = [];
+    }
+
+    parentReply.replies.push({
+      _id: new mongoose.Types.ObjectId(),
+      text,
+      user: req.user!._id,
+      createdAt: new Date()
+    });
+
+    await pdf.save();
+    res.json(pdf);
+  } catch (error) {
+    console.error('Failed to add nested reply:', error);
+    res.status(500).json({ error: 'Failed to add nested reply' });
+  }
+};
+
+export const addSharedNestedReply = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { text, guestName } = req.body;
+    const { token, commentId, replyId } = req.params;
+    const pdf = await PDF.findOne({ shareToken: token });
+
+    if (!pdf) {
+      res.status(404).json({ error: 'PDF not found' });
+      return;
+    }
+
+    const comment = (pdf.comments as Comment[]).find(c => c._id.toString() === commentId);
+    if (!comment) {
+      res.status(404).json({ error: 'Comment not found' });
+      return;
+    }
+
+    const parentReply = comment.replies?.find(r => r._id.toString() === replyId);
+    if (!parentReply) {
+      res.status(404).json({ error: 'Reply not found' });
+      return;
+    }
+
+    if (!parentReply.replies) {
+      parentReply.replies = [];
+    }
+
+    const guestUser = {
+      name: guestName,
+      email: `guest-${Date.now()}@example.com`
+    };
+
+    parentReply.replies.push({
+      _id: new mongoose.Types.ObjectId(),
+      text,
+      user: guestUser,
+      createdAt: new Date()
+    });
+
+    await pdf.save();
+    res.json(pdf);
+  } catch (error) {
+    console.error('Failed to add nested reply:', error);
+    res.status(500).json({ error: 'Failed to add nested reply' });
   }
 };
 

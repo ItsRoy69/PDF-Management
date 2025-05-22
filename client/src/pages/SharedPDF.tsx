@@ -44,15 +44,12 @@ const SharedPDF = () => {
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check for email in URL query params
     const queryParams = new URLSearchParams(location.search);
     const email = queryParams.get('email');
     if (email) {
       setGuestEmail(email);
-      // Try to load with the email from URL
       loadSharedPDF(email);
     } else {
-      // Show email verification dialog if no email in URL
       setEmailVerificationOpen(true);
     }
   }, [token, location.search]);
@@ -66,7 +63,6 @@ const SharedPDF = () => {
       const data = await pdfService.getSharedPDF(token!, email);
       setPdf(data);
       
-      // If we successfully loaded with email, mark as verified
       if (email) {
         setEmailVerified(true);
         setEmailVerificationOpen(false);
@@ -74,7 +70,6 @@ const SharedPDF = () => {
     } catch (error: any) {
       console.error('Failed to load shared PDF:', error);
       if (error.response && error.response.status === 403) {
-        // This is an authorization error
         setAuthError('You are not authorized to access this PDF. Please check your email address.');
         setEmailVerificationOpen(true);
       } else {
@@ -93,20 +88,16 @@ const SharedPDF = () => {
     loadSharedPDF(guestEmail);
   };
 
-  // Get file ID from Appwrite URL
   const getFileIdFromUrl = (url: string): string | null => {
     const matches = url.match(/\/files\/([^/]+)\/view/);
     return matches ? matches[1] : null;
   };
 
-  // Get a direct PDF URL that works for opening in a new tab
   const getPdfUrl = (fileUrl: string): string => {
     const fileId = getFileIdFromUrl(fileUrl);
     if (fileId && pdf?.accessToken) {
-      // Use our proxy endpoint with the access token
       return `/api/pdf/proxy/${fileId}?accessToken=${pdf.accessToken}`;
     }
-    // Fallback to direct URL with CORS headers
     return fileUrl;
   };
 

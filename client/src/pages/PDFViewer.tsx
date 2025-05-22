@@ -1,32 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import {
-  Container,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Box,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Snackbar,
-  Alert,
-  CircularProgress,
-  Link,
-  Chip,
-  IconButton,
-  Tab,
-  Tabs,
-} from '@mui/material';
-import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfService } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
 import ShareIcon from '@mui/icons-material/Share';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -37,12 +11,6 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import Topbar from '../components/Topbar/Topbar';
 import '../styles/PDFViewer.css';
 
-// Use local worker
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.js',
-  import.meta.url
-).toString();
-
 interface Comment {
   _id: string;
   text: string;
@@ -51,11 +19,20 @@ interface Comment {
   };
   createdAt: string;
   replies: {
+    _id: string;
     text: string;
     user: {
       name: string;
     };
     createdAt: string;
+    replies?: {
+      _id: string;
+      text: string;
+      user: {
+        name: string;
+      };
+      createdAt: string;
+    }[];
   }[];
 }
 
@@ -70,12 +47,11 @@ interface PDFData {
 const PDFViewer = () => {
   const { id } = useParams<{ id: string }>();
   const [pdf, setPdf] = useState<PDFData | null>(null);
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
   const [comment, setComment] = useState('');
   const [reply, setReply] = useState('');
+  const [nestedReply, setNestedReply] = useState('');
   const [selectedComment, setSelectedComment] = useState<string | null>(null);
-  const { user } = useAuth();
+  const [selectedReply, setSelectedReply] = useState<string | null>(null);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareLink, setShareLink] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -88,7 +64,9 @@ const PDFViewer = () => {
   const [tabValue, setTabValue] = useState(0);
   const [invitedUsers, setInvitedUsers] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [isSubmittingNestedReply, setIsSubmittingNestedReply] = useState(false);
+
   useEffect(() => {
     loadPDF();
   }, [id]);
@@ -105,8 +83,7 @@ const PDFViewer = () => {
       setPdfError(null);
       const data = await pdfService.getOne(id!);
       setPdf(data);
-      
-      // Log success message
+
       console.log('PDF data loaded successfully:', data.title);
     } catch (error) {
       console.error('Failed to load PDF data:', error);
@@ -127,7 +104,7 @@ const PDFViewer = () => {
 
   const handleAddComment = async () => {
     if (isSubmitting || !comment.trim()) return;
-    
+
     try {
       setIsSubmitting(true);
       await pdfService.addComment(id!, comment);
@@ -143,27 +120,49 @@ const PDFViewer = () => {
   };
 
   const handleAddReply = async (commentId: string) => {
+    if (isSubmittingReply || !reply.trim()) return;
+
     try {
+      setIsSubmittingReply(true);
       await pdfService.addReply(id!, commentId, reply);
       setReply('');
       setSelectedComment(null);
-      // Add a small delay before reloading to prevent race conditions
-      setTimeout(() => {
-        loadPDF();
-      }, 500);
+      await loadPDF();
     } catch (error) {
       console.error('Failed to add reply:', error);
+      setSnackbarMessage('Failed to add reply');
+      setSnackbarOpen(true);
+    } finally {
+      setIsSubmittingReply(false);
+    }
+  };
+
+  const handleAddNestedReply = async (commentId: string, parentReplyId: string) => {
+    if (isSubmittingNestedReply || !nestedReply.trim()) return;
+
+    try {
+      setIsSubmittingNestedReply(true);
+      await pdfService.addNestedReply(id!, commentId, parentReplyId, nestedReply);
+      setNestedReply('');
+      setSelectedReply(null);
+      await loadPDF();
+    } catch (error) {
+      console.error('Failed to add nested reply:', error);
+      setSnackbarMessage('Failed to add nested reply');
+      setSnackbarOpen(true);
+    } finally {
+      setIsSubmittingNestedReply(false);
     }
   };
 
   const handleShareClick = async () => {
     try {
       const link = await pdfService.generateShareLink(id!);
-      
-      const fullLink = link.startsWith('http') 
-        ? link 
+
+      const fullLink = link.startsWith('http')
+        ? link
         : `${window.location.origin}${link.startsWith('/') ? '' : '/'}${link}`;
-      
+
       setShareLink(fullLink);
       setShareDialogOpen(true);
     } catch (error) {
@@ -187,52 +186,40 @@ const PDFViewer = () => {
   const getPdfUrl = (fileUrl: string): string => {
     const fileId = getFileIdFromUrl(fileUrl);
     if (fileId) {
-      // Add accessToken if available in the PDF data
       if (pdf?.accessToken) {
         return `/api/pdf/proxy/${fileId}?accessToken=${pdf.accessToken}&t=${Date.now()}`;
       }
-      // Otherwise just use timestamp for cache-busting
       return `/api/pdf/proxy/${fileId}?t=${Date.now()}`;
     }
     return fileUrl;
   };
 
-  // Gets a direct URL from Appwrite that could be used as fallback
   const getDirectAppwriteUrl = (fileUrl: string): string | null => {
     const fileId = getFileIdFromUrl(fileUrl);
     if (!fileId) return null;
-    
+
     const appwriteEndpoint = import.meta.env.VITE_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1';
-    const appwriteProjectId = import.meta.env.VITE_APPWRITE_PROJECT_ID; 
+    const appwriteProjectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
     const appwriteBucketId = import.meta.env.VITE_APPWRITE_BUCKET_ID;
-    
+
     if (!appwriteEndpoint || !appwriteProjectId || !appwriteBucketId) return null;
-    
+
     return `${appwriteEndpoint}/storage/buckets/${appwriteBucketId}/files/${fileId}/view?project=${appwriteProjectId}`;
   };
 
   const handleOpenPdf = () => {
     if (pdf?.fileUrl) {
-      // Try to open the proxy URL, fall back to direct Appwrite URL if needed
       const url = getPdfUrl(pdf.fileUrl);
       const directUrl = getDirectAppwriteUrl(pdf.fileUrl);
-      
+
       window.open(url, '_blank');
-      
-      // Log the URL for debugging
+
       console.log('Opening PDF URL:', url);
       if (directUrl) {
         console.log('Direct Appwrite URL (fallback):', directUrl);
       }
     }
   };
-
-  // Memoize PDF options to prevent unnecessary re-renders
-  const pdfOptions = useMemo(() => ({
-    cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
-    cMapPacked: true,
-    standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`
-  }), []);
 
   const handleInviteClick = () => {
     setInviteEmail('');
@@ -253,7 +240,7 @@ const PDFViewer = () => {
 
   const handleInviteUsers = async () => {
     if (inviteEmails.length === 0) return;
-    
+
     try {
       const result = await pdfService.inviteUsers(id!, inviteEmails);
       setShareLink(result.link);
@@ -339,8 +326,8 @@ const PDFViewer = () => {
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Add a comment..."
               />
-              <button 
-                className="pdf-viewer-button" 
+              <button
+                className="pdf-viewer-button"
                 onClick={handleAddComment}
                 disabled={isSubmitting || !comment.trim()}
               >
@@ -350,32 +337,107 @@ const PDFViewer = () => {
               <ul className="comment-list">
                 {pdf?.comments.map((comment: Comment) => (
                   <li key={comment._id} className="comment-item">
-                    <p className="comment-text">{comment.text}</p>
-                    <p className="comment-meta">
-                      {comment.user.name} - {new Date(comment.createdAt).toLocaleString()}
-                    </p>
-                    {comment.replies.map((reply, index) => (
-                      <div key={index} className="reply-section">
-                        <p className="comment-text">{reply.text}</p>
-                        <p className="comment-meta">
-                          {reply.user.name} - {new Date(reply.createdAt).toLocaleString()}
-                        </p>
+                    <div className="comment-header">
+                      <div className="comment-avatar">
+                        {(comment.user?.name || 'A').charAt(0).toUpperCase()}
                       </div>
-                    ))}
+                      <div className="comment-meta">
+                        <span className="comment-author">{comment.user?.name || 'Anonymous'}</span>
+                        <span className="comment-date">
+                          {new Date(comment.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="comment-text">{comment.text}</p>
+                    
+                    {comment.replies && comment.replies.length > 0 && (
+                      <div className="reply-list">
+                        {comment.replies.map((reply) => (
+                          <div key={reply._id} className="reply-item">
+                            <div className="reply-header">
+                              <div className="reply-avatar">
+                                {(reply.user?.name || 'A').charAt(0).toUpperCase()}
+                              </div>
+                              <div className="comment-meta">
+                                <span className="comment-author">{reply.user?.name || 'Anonymous'}</span>
+                                <span className="comment-date">
+                                  {new Date(reply.createdAt).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="reply-text">{reply.text}</p>
+                            
+                            {reply.replies && reply.replies.length > 0 && (
+                              <div className="nested-reply-list">
+                                {reply.replies.map((nestedReply) => (
+                                  <div key={nestedReply._id} className="nested-reply-item">
+                                    <div className="reply-header">
+                                      <div className="reply-avatar">
+                                        {(nestedReply.user?.name || 'A').charAt(0).toUpperCase()}
+                                      </div>
+                                      <div className="comment-meta">
+                                        <span className="comment-author">{nestedReply.user?.name || 'Anonymous'}</span>
+                                        <span className="comment-date">
+                                          {new Date(nestedReply.createdAt).toLocaleString()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <p className="reply-text">{nestedReply.text}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            
+                            {selectedReply === reply._id ? (
+                              <div className="nested-reply-section">
+                                <textarea
+                                  className="reply-input"
+                                  value={nestedReply}
+                                  onChange={(e) => setNestedReply(e.target.value)}
+                                  placeholder="Add a reply..."
+                                />
+                                <button
+                                  className="pdf-viewer-button"
+                                  onClick={() => handleAddNestedReply(comment._id, reply._id)}
+                                  disabled={isSubmittingNestedReply || !nestedReply.trim()}
+                                >
+                                  {isSubmittingNestedReply ? 'Adding...' : 'Add Reply'}
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                className="reply-button"
+                                onClick={() => setSelectedReply(reply._id)}
+                              >
+                                Reply
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
                     {selectedComment === comment._id ? (
                       <div className="reply-section">
                         <textarea
-                          className="comment-input"
+                          className="reply-input"
                           value={reply}
                           onChange={(e) => setReply(e.target.value)}
                           placeholder="Add a reply..."
                         />
-                        <button className="pdf-viewer-button" onClick={() => handleAddReply(comment._id)}>
-                          Add Reply
+                        <button
+                          className="pdf-viewer-button"
+                          onClick={() => handleAddReply(comment._id)}
+                          disabled={isSubmittingReply || !reply.trim()}
+                        >
+                          {isSubmittingReply ? 'Adding...' : 'Add Reply'}
                         </button>
                       </div>
                     ) : (
-                      <button className="reply-button" onClick={() => setSelectedComment(comment._id)}>
+                      <button 
+                        className="reply-button"
+                        onClick={() => setSelectedComment(comment._id)}
+                      >
                         Reply
                       </button>
                     )}

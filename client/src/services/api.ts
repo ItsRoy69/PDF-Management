@@ -9,7 +9,6 @@ const api = axios.create({
   },
 });
 
-// Add token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -127,6 +126,16 @@ export const pdfService = {
 
   addSharedReply: async (token: string, commentId: string, text: string, guestName: string) => {
     const response = await api.post(`/pdf/shared/${token}/comments/${commentId}/replies`, { text, guestName });
+    return response.data;
+  },
+
+  addNestedReply: async (id: string, commentId: string, replyId: string, text: string) => {
+    const response = await api.post(`/pdf/${id}/comments/${commentId}/replies/${replyId}/replies`, { text });
+    return response.data;
+  },
+
+  addSharedNestedReply: async (token: string, commentId: string, replyId: string, text: string, guestName: string) => {
+    const response = await api.post(`/pdf/shared/${token}/comments/${commentId}/replies/${replyId}/replies`, { text, guestName });
     return response.data;
   },
 };

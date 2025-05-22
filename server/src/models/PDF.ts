@@ -12,6 +12,7 @@ export interface IPDF extends mongoose.Document {
   shareToken?: string;
   accessTokens?: string[];
   comments: {
+    _id: mongoose.Types.ObjectId;
     text: string;
     user: mongoose.Types.ObjectId | {
       name: string;
@@ -19,89 +20,61 @@ export interface IPDF extends mongoose.Document {
     };
     createdAt: Date;
     replies?: {
+      _id: mongoose.Types.ObjectId;
       text: string;
       user: mongoose.Types.ObjectId | {
         name: string;
         email: string;
       };
       createdAt: Date;
+      replies?: {
+        _id: mongoose.Types.ObjectId;
+        text: string;
+        user: mongoose.Types.ObjectId | {
+          name: string;
+          email: string;
+        };
+        createdAt: Date;
+      }[];
     }[];
   }[];
 }
 
-const pdfSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  name: {
-    type: String,
-    trim: true
-  },
-  filename: {
-    type: String,
-    required: true
-  },
-  originalName: {
-    type: String,
-    required: true
-  },
-  fileUrl: {
-    type: String,
-    required: true
-  },
-  owner: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  sharedWith: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  invitedEmails: [{
-    type: String,
-    trim: true
-  }],
-  shareToken: {
-    type: String,
-    unique: true,
-    sparse: true
-  },
-  accessTokens: [{
-    type: String
-  }],
+const PDFSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  name: { type: String, required: true },
+  filename: { type: String, required: true },
+  originalName: { type: String, required: true },
+  fileUrl: { type: String, required: true },
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  invitedEmails: [String],
+  shareToken: String,
+  accessTokens: [String],
   comments: [{
-    text: {
-      type: String,
-      required: true
-    },
+    text: { type: String, required: true },
     user: {
       type: mongoose.Schema.Types.Mixed,
       required: true
     },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    },
+    createdAt: { type: Date, default: Date.now },
     replies: [{
-      text: {
-        type: String,
-        required: true
-      },
+      text: { type: String, required: true },
       user: {
         type: mongoose.Schema.Types.Mixed,
         required: true
       },
-      createdAt: {
-        type: Date,
-        default: Date.now
-      }
+      createdAt: { type: Date, default: Date.now },
+      replies: [{
+        text: { type: String, required: true },
+        user: {
+          type: mongoose.Schema.Types.Mixed,
+          required: true
+        },
+        createdAt: { type: Date, default: Date.now }
+      }]
     }]
   }]
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
-export const PDF = mongoose.model<IPDF>('PDF', pdfSchema); 
+export const PDF = mongoose.model<IPDF>('PDF', PDFSchema); 
