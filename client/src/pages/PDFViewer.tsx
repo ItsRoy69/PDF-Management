@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Container,
@@ -18,14 +18,21 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
+  Link,
 } from '@mui/material';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ShareIcon from '@mui/icons-material/Share';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+// Use local worker
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.js',
+  import.meta.url
+).toString();
 
 interface Comment {
   _id: string;
@@ -43,9 +50,15 @@ interface Comment {
   }[];
 }
 
+interface PDFData {
+  title: string;
+  fileUrl: string;
+  comments: Comment[];
+}
+
 const PDFViewer = () => {
   const { id } = useParams<{ id: string }>();
-  const [pdf, setPdf] = useState<any>(null);
+  const [pdf, setPdf] = useState<PDFData | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [comment, setComment] = useState('');
@@ -58,9 +71,6 @@ const PDFViewer = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(true);
-
-  // Try to fetch and create a direct object URL for the PDF
-  const [directPdfUrl, setDirectPdfUrl] = useState<string | null>(null);
   
   useEffect(() => {
     loadPDF();
@@ -72,20 +82,14 @@ const PDFViewer = () => {
       setPdfError(null);
       const data = await pdfService.getOne(id!);
       setPdf(data);
+      
+      // Log success message
+      console.log('PDF data loaded successfully:', data.title);
     } catch (error) {
-      console.error('Failed to load PDF:', error);
+      console.error('Failed to load PDF data:', error);
+      setPdfError(`Failed to load PDF data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setPdfLoading(false);
-    }
-  };
-
-  const handlePdfLoadError = (error: Error) => {
-    console.error('Error loading PDF:', error);
-    setPdfError(`Failed to load PDF: ${error.message || 'Unknown error'}`);
-    setPdfLoading(false);
-    
-    if (pdf?.fileUrl) {
-      console.log('Attempted to load PDF from:', getPdfUrl(pdf.fileUrl));
     }
   };
 
@@ -129,52 +133,55 @@ const PDFViewer = () => {
   };
 
   const getFileIdFromUrl = (url: string): string | null => {
-    const matches = url.match(/\/files\/([^\/]+)\/view/);
+    const matches = url.match(/\/files\/([^/]+)\/view/);
     return matches ? matches[1] : null;
   };
 
   const getPdfUrl = (fileUrl: string): string => {
     const fileId = getFileIdFromUrl(fileUrl);
     if (fileId) {
-      return `/api/pdf/proxy/${fileId}`;
+      // Add cache-busting parameter to avoid browser caching issues
+      return `/api/pdf/proxy/${fileId}?t=${Date.now()}`;
     }
     return fileUrl;
   };
 
-  useEffect(() => {
-    if (pdf?.fileUrl) {
-      // Try to fetch the PDF directly as a blob
-      fetch(getPdfUrl(pdf.fileUrl))
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.blob();
-        })
-        .then(blob => {
-          // Create an object URL from the blob
-          const objectUrl = URL.createObjectURL(blob);
-          setDirectPdfUrl(objectUrl);
-          console.log('Created direct PDF object URL:', objectUrl);
-        })
-        .catch(error => {
-          console.error('Failed to create direct PDF URL:', error);
-        });
-    }
+  // Gets a direct URL from Appwrite that could be used as fallback
+  const getDirectAppwriteUrl = (fileUrl: string): string | null => {
+    const fileId = getFileIdFromUrl(fileUrl);
+    if (!fileId) return null;
     
-    // Clean up object URL when component unmounts or PDF changes
-    return () => {
-      if (directPdfUrl) {
-        URL.revokeObjectURL(directPdfUrl);
-      }
-    };
-  }, [pdf]);
+    const appwriteEndpoint = import.meta.env.VITE_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1';
+    const appwriteProjectId = import.meta.env.VITE_APPWRITE_PROJECT_ID; 
+    const appwriteBucketId = import.meta.env.VITE_APPWRITE_BUCKET_ID;
+    
+    if (!appwriteEndpoint || !appwriteProjectId || !appwriteBucketId) return null;
+    
+    return `${appwriteEndpoint}/storage/buckets/${appwriteBucketId}/files/${fileId}/view?project=${appwriteProjectId}`;
+  };
 
-  useEffect(() => {
+  const handleOpenPdf = () => {
     if (pdf?.fileUrl) {
-      console.log('PDF URL:', getPdfUrl(pdf.fileUrl));
+      // Try to open the proxy URL, fall back to direct Appwrite URL if needed
+      const url = getPdfUrl(pdf.fileUrl);
+      const directUrl = getDirectAppwriteUrl(pdf.fileUrl);
+      
+      window.open(url, '_blank');
+      
+      // Log the URL for debugging
+      console.log('Opening PDF URL:', url);
+      if (directUrl) {
+        console.log('Direct Appwrite URL (fallback):', directUrl);
+      }
     }
-  }, [pdf]);
+  };
+
+  // Memoize PDF options to prevent unnecessary re-renders
+  const pdfOptions = useMemo(() => ({
+    cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+    cMapPacked: true,
+    standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`
+  }), []);
 
   return (
     <Container>
@@ -182,13 +189,25 @@ const PDFViewer = () => {
         <Paper elevation={3} sx={{ p: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
             <Typography variant="h5">{pdf?.title}</Typography>
-            <Button
-              variant="contained"
-              startIcon={<ShareIcon />}
-              onClick={handleShareClick}
-            >
-              Share
-            </Button>
+            <Box>
+              <Button
+                variant="contained"
+                startIcon={<ShareIcon />}
+                onClick={handleShareClick}
+                sx={{ mr: 1 }}
+              >
+                Share
+              </Button>
+              {pdfError && (
+                <Button
+                  variant="outlined"
+                  startIcon={<RefreshIcon />}
+                  onClick={loadPDF}
+                >
+                  Retry
+                </Button>
+              )}
+            </Box>
           </Box>
           {pdfLoading && (
             <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}>
@@ -197,46 +216,29 @@ const PDFViewer = () => {
           )}
           {pdfError && (
             <Box sx={{ textAlign: 'center', my: 5 }}>
-              <Typography color="error">{pdfError}</Typography>
+              <Typography color="error" gutterBottom>
+                {pdfError}
+              </Typography>
               <Button 
-                variant="outlined" 
+                variant="contained"
+                startIcon={<PictureAsPdfIcon />}
+                onClick={handleOpenPdf}
                 sx={{ mt: 2 }}
-                onClick={loadPDF}
               >
-                Retry
+                Open PDF in New Tab
               </Button>
             </Box>
           )}
           {pdf && !pdfLoading && !pdfError && (
-            <Document
-              file={directPdfUrl || (pdf.fileUrl ? getPdfUrl(pdf.fileUrl) : undefined)}
-              onLoadSuccess={({ numPages }) => {
-                setNumPages(numPages);
-                setPdfLoading(false);
-              }}
-              onLoadError={handlePdfLoadError}
-              loading={<CircularProgress />}
-              error={<Typography color="error">Failed to load PDF</Typography>}
-            >
-              <Page pageNumber={pageNumber} />
-            </Document>
-          )}
-          {numPages && (
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-              <Button
-                disabled={pageNumber <= 1}
-                onClick={() => setPageNumber(pageNumber - 1)}
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 500 }}>
+              <Button 
+                variant="contained" 
+                size="large" 
+                startIcon={<PictureAsPdfIcon />}
+                onClick={handleOpenPdf}
+                sx={{ py: 2, px: 4 }}
               >
-                Previous
-              </Button>
-              <Typography sx={{ mx: 2 }}>
-                Page {pageNumber} of {numPages}
-              </Typography>
-              <Button
-                disabled={pageNumber >= (numPages || 1)}
-                onClick={() => setPageNumber(pageNumber + 1)}
-              >
-                Next
+                Open PDF in New Tab
               </Button>
             </Box>
           )}

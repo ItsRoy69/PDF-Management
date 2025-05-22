@@ -13,11 +13,7 @@ import {
   Divider,
   CircularProgress,
 } from '@mui/material';
-import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfService } from '../services/api';
-
-// Update the worker source to use the CDN version
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
 interface Comment {
   _id: string;
@@ -35,19 +31,21 @@ interface Comment {
   }[];
 }
 
+interface SharedPdfData {
+  title: string;
+  fileUrl: string;
+  comments: Comment[];
+}
+
 const SharedPDF = () => {
   const { token } = useParams<{ token: string }>();
-  const [pdf, setPdf] = useState<any>(null);
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
+  const [pdf, setPdf] = useState<SharedPdfData | null>(null);
   const [comment, setComment] = useState('');
   const [reply, setReply] = useState('');
   const [selectedComment, setSelectedComment] = useState<string | null>(null);
   const [guestName, setGuestName] = useState('');
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(true);
-  // Try to fetch and create a direct object URL for the PDF
-  const [directPdfUrl, setDirectPdfUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadSharedPDF();
@@ -69,11 +67,11 @@ const SharedPDF = () => {
 
   // Get file ID from Appwrite URL
   const getFileIdFromUrl = (url: string): string | null => {
-    const matches = url.match(/\/files\/([^\/]+)\/view/);
+    const matches = url.match(/\/files\/([^/]+)\/view/);
     return matches ? matches[1] : null;
   };
 
-  // Get a direct PDF URL that works with react-pdf
+  // Get a direct PDF URL that works for opening in a new tab
   const getPdfUrl = (fileUrl: string): string => {
     const fileId = getFileIdFromUrl(fileUrl);
     if (fileId) {
@@ -84,66 +82,11 @@ const SharedPDF = () => {
     return fileUrl;
   };
 
-  // Function to handle PDF load error
-  const handlePdfLoadError = (error: Error) => {
-    console.error('Error loading PDF:', error);
-    // More detailed error message
-    setPdfError(`Failed to load PDF: ${error.message || 'Unknown error'}`);
-    setPdfLoading(false);
-    
-    // Log additional debugging information
+  const handleOpenPdf = () => {
     if (pdf?.fileUrl) {
-      console.log('Attempted to load PDF from:', getPdfUrl(pdf.fileUrl));
+      window.open(getPdfUrl(pdf.fileUrl), '_blank');
     }
   };
-
-  // Add console logging to debug the PDF URL
-  useEffect(() => {
-    if (pdf?.fileUrl) {
-      console.log('PDF URL:', getPdfUrl(pdf.fileUrl));
-      // Try to fetch the PDF to check if it's accessible
-      fetch(getPdfUrl(pdf.fileUrl))
-        .then(response => {
-          console.log('PDF fetch response:', response.status, response.statusText);
-          if (!response.ok) {
-            console.error('PDF fetch failed with status:', response.status);
-          }
-        })
-        .catch(error => {
-          console.error('PDF fetch error:', error);
-        });
-    }
-  }, [pdf]);
-
-  // Try to fetch and create a direct object URL for the PDF
-  useEffect(() => {
-    if (pdf?.fileUrl) {
-      // Try to fetch the PDF directly as a blob
-      fetch(getPdfUrl(pdf.fileUrl))
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.blob();
-        })
-        .then(blob => {
-          // Create an object URL from the blob
-          const objectUrl = URL.createObjectURL(blob);
-          setDirectPdfUrl(objectUrl);
-          console.log('Created direct PDF object URL:', objectUrl);
-        })
-        .catch(error => {
-          console.error('Failed to create direct PDF URL:', error);
-        });
-    }
-    
-    // Clean up object URL when component unmounts or PDF changes
-    return () => {
-      if (directPdfUrl) {
-        URL.revokeObjectURL(directPdfUrl);
-      }
-    };
-  }, [pdf]);
 
   const handleAddComment = async () => {
     if (!guestName) {
@@ -201,35 +144,14 @@ const SharedPDF = () => {
             </Box>
           )}
           {pdf && !pdfLoading && !pdfError && (
-            <Document
-              file={directPdfUrl || (pdf.fileUrl ? getPdfUrl(pdf.fileUrl) : undefined)}
-              onLoadSuccess={({ numPages }) => {
-                setNumPages(numPages);
-                setPdfLoading(false);
-              }}
-              onLoadError={handlePdfLoadError}
-              loading={<CircularProgress />}
-              error={<Typography color="error">Failed to load PDF</Typography>}
-            >
-              <Page pageNumber={pageNumber} />
-            </Document>
-          )}
-          {numPages && (
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-              <Button
-                disabled={pageNumber <= 1}
-                onClick={() => setPageNumber(pageNumber - 1)}
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+              <Button 
+                variant="contained" 
+                size="large" 
+                onClick={handleOpenPdf}
+                sx={{ py: 2, px: 4 }}
               >
-                Previous
-              </Button>
-              <Typography sx={{ mx: 2 }}>
-                Page {pageNumber} of {numPages}
-              </Typography>
-              <Button
-                disabled={pageNumber >= (numPages || 1)}
-                onClick={() => setPageNumber(pageNumber + 1)}
-              >
-                Next
+                Open PDF in New Tab
               </Button>
             </Box>
           )}

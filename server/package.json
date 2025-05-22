@@ -21,7 +21,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.15.0",
     "multer": "^2.0.0",
-    "node-appwrite": "^17.0.0"
+    "node-appwrite": "^16.0.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",

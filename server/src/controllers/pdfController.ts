@@ -339,28 +339,99 @@ export const proxyPdfFile = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const fileUrl = `${appwriteEndpoint}/storage/buckets/${appwriteBucketId}/files/${fileId}/view?project=${appwriteProjectId}`;
+    // Updated URL format to match Appwrite's API specification
+    const fileUrl = `${appwriteEndpoint}/storage/buckets/${appwriteBucketId}/files/${fileId}/view`;
+    
+    console.log(`[PDF Proxy] Attempting to proxy PDF from Appwrite URL: ${fileUrl}`);
+    console.log(`[PDF Proxy] Request headers:`, req.headers);
     
     try {
-      const response = await axios.get(fileUrl, {
+      const response = await axios({
+        method: 'get',
+        url: fileUrl,
         responseType: 'arraybuffer',
         headers: {
           'X-Appwrite-Project': appwriteProjectId,
           'X-Appwrite-Key': appwriteApiKey,
-          'Content-Type': 'application/json',
-        },
+          'Accept': 'application/pdf' // Explicitly request PDF content
+        }
       });
       
-      // Set appropriate headers
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
-      res.setHeader('Access-Control-Allow-Origin', '*');
+      // Log some information about the response
+      console.log(`[PDF Proxy] Received data from Appwrite. Size: ${response.data.length} bytes`);
+      console.log(`[PDF Proxy] Response content type: ${response.headers['content-type']}`);
+      console.log(`[PDF Proxy] Response headers:`, response.headers);
       
-      // Send the PDF data
-      res.send(response.data);
+      // Check if we received a PDF or binary data
+      const contentType = response.headers['content-type'];
+      
+      // Check for PDF magic number (%PDF-)
+      const data = Buffer.from(response.data);
+      if (data.length >= 5) {
+        const magicNumber = data.toString('ascii', 0, 5);
+        console.log(`[PDF Proxy] File magic number: "${magicNumber}"`);
+        
+        if (magicNumber === '%PDF-') {
+          // This is a valid PDF file by magic number check
+          console.log('[PDF Proxy] PDF magic number detected in the response');
+          
+          // Set appropriate headers
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Length', data.length);
+          res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
+          res.setHeader('Cache-Control', 'no-cache');
+          
+          // Send the PDF data
+          res.status(200).send(data);
+          console.log('[PDF Proxy] Successfully sent PDF data to client');
+          return;
+        }
+      }
+      
+      // If content type is HTML or not PDF, and we didn't detect PDF magic number
+      if (!contentType || !contentType.includes('application/pdf')) {
+        console.error('Received non-PDF content type:', contentType);
+        
+        // If the response is text/html or similar, log a portion for debugging
+        if (contentType && (contentType.includes('text/html') || contentType.includes('text/plain'))) {
+          const textContent = Buffer.from(response.data).toString('utf8').substring(0, 500);
+          console.error('Content preview (first 500 chars):', textContent);
+          
+          // Instead of returning an error, try to redirect to the direct Appwrite URL
+          const directUrl = `${appwriteEndpoint}/storage/buckets/${appwriteBucketId}/files/${fileId}/view?project=${appwriteProjectId}`;
+          res.redirect(directUrl);
+          return;
+        }
+      }
+      
+      // Set appropriate headers for any other binary data
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Length', response.data.length);
+      res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      // Send the data
+      res.status(200).send(response.data);
     } catch (error) {
       console.error('Failed to fetch PDF from Appwrite:', error);
-      res.status(404).json({ error: 'PDF file not found' });
+      if (axios.isAxiosError(error)) {
+        console.error('Axios error details:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          headers: error.response?.headers,
+          data: error.response?.data instanceof Buffer 
+            ? 'Binary data' 
+            : typeof error.response?.data === 'string' 
+              ? error.response?.data.substring(0, 200) + '...' 
+              : error.response?.data ? JSON.stringify(error.response?.data).substring(0, 200) + '...' : 'No data'
+        });
+        
+        // Try to redirect to direct URL if there's an error
+        const directUrl = `${appwriteEndpoint}/storage/buckets/${appwriteBucketId}/files/${fileId}/view?project=${appwriteProjectId}`;
+        res.redirect(directUrl);
+        return;
+      }
+      res.status(404).json({ error: 'PDF file not found or inaccessible' });
     }
   } catch (error) {
     console.error('PDF proxy error:', error);
