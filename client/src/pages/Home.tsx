@@ -50,7 +50,7 @@ const Home = () => {
                 </button>
                 <button
                   className="secondary-button"
-                  onClick={() => navigate('/register')}
+                  onClick={() => navigate('/signup')}
                 >
                   Create Account
                 </button>

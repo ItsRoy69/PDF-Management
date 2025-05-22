@@ -2,16 +2,9 @@ import { useState } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { Link } from 'react-router-dom';
-import {
-  Container,
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Box,
-  Alert,
-} from '@mui/material';
+import { Email as EmailIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import '../styles/ForgotPassword.css';
 
 const validationSchema = Yup.object({
   email: Yup.string().email('Invalid email address').required('Email is required'),
@@ -40,72 +33,64 @@ const ForgotPassword = () => {
   });
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h5" component="h1" gutterBottom align="center">
-          Reset Password
-        </Typography>
+    <div className="forgot-password-container">
+      <div className="forgot-password-form">
+        <h1 className="forgot-password-title">Reset Password</h1>
         
         {success ? (
-          <Box sx={{ mt: 2 }}>
-            <Alert severity="success">
+          <div>
+            <div className="success-message">
               If an account with that email exists, we've sent password reset instructions.
-            </Alert>
-            <Box sx={{ mt: 2, textAlign: 'center' }}>
-              <Link to="/login" style={{ textDecoration: 'none' }}>
-                <Button variant="text" color="primary">
-                  Return to Login
-                </Button>
-              </Link>
-            </Box>
-          </Box>
+            </div>
+            <Link to="/login" className="back-link">
+              <ArrowBackIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+              Return to Login
+            </Link>
+          </div>
         ) : (
-          <Box component="form" onSubmit={formik.handleSubmit} sx={{ mt: 2 }}>
-            <Typography variant="body1" gutterBottom>
+          <form onSubmit={formik.handleSubmit}>
+            <p className="forgot-password-subtitle">
               Enter your email address and we'll send you instructions to reset your password.
-            </Typography>
+            </p>
             
             {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
+              <div className="error-message">
                 {error}
-              </Alert>
+              </div>
             )}
             
-            <TextField
-              fullWidth
-              id="email"
-              name="email"
-              label="Email Address"
-              value={formik.values.email}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.email && Boolean(formik.errors.email)}
-              helperText={formik.touched.email && formik.errors.email}
-              margin="normal"
-            />
+            <div className="form-group">
+              <input
+                className={`form-input ${formik.touched.email && formik.errors.email ? 'error' : ''}`}
+                id="email"
+                name="email"
+                placeholder="Email Address"
+                value={formik.values.email}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              />
+              {formik.touched.email && formik.errors.email && (
+                <div className="error-message">{formik.errors.email}</div>
+              )}
+            </div>
             
-            <Button
+            <button
               type="submit"
-              fullWidth
-              variant="contained"
-              color="primary"
-              sx={{ mt: 3, mb: 2 }}
+              className="submit-button"
               disabled={formik.isSubmitting}
             >
+              <EmailIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
               Send Reset Instructions
-            </Button>
+            </button>
             
-            <Box sx={{ mt: 1, textAlign: 'center' }}>
-              <Link to="/login" style={{ textDecoration: 'none' }}>
-                <Button variant="text" color="primary">
-                  Back to Login
-                </Button>
-              </Link>
-            </Box>
-          </Box>
+            <Link to="/login" className="back-link">
+              <ArrowBackIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+              Back to Login
+            </Link>
+          </form>
         )}
-      </Paper>
-    </Container>
+      </div>
+    </div>
   );
 };
 
