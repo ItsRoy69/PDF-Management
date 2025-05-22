@@ -62,6 +62,7 @@ interface PDFData {
   fileUrl: string;
   comments: Comment[];
   invitedEmails?: string[];
+  accessToken?: string;
 }
 
 const PDFViewer = () => {
@@ -173,7 +174,11 @@ const PDFViewer = () => {
   const getPdfUrl = (fileUrl: string): string => {
     const fileId = getFileIdFromUrl(fileUrl);
     if (fileId) {
-      // Add cache-busting parameter to avoid browser caching issues
+      // Add accessToken if available in the PDF data
+      if (pdf?.accessToken) {
+        return `/api/pdf/proxy/${fileId}?accessToken=${pdf.accessToken}&t=${Date.now()}`;
+      }
+      // Otherwise just use timestamp for cache-busting
       return `/api/pdf/proxy/${fileId}?t=${Date.now()}`;
     }
     return fileUrl;

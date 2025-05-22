@@ -108,7 +108,28 @@ export const getPDF = async (req: AuthRequest, res: Response): Promise<void> => 
       return;
     }
 
-    res.json(pdf);
+    // Generate a temporary access token for this viewing session
+    const accessToken = crypto.randomBytes(16).toString('hex');
+    
+    // Store the access token in the PDF document
+    if (!pdf.accessTokens) {
+      pdf.accessTokens = [];
+    }
+    
+    // Limit the number of access tokens to prevent unlimited growth
+    if (pdf.accessTokens.length > 100) {
+      // If we have too many tokens, remove the oldest ones
+      pdf.accessTokens = pdf.accessTokens.slice(-50);
+    }
+    
+    pdf.accessTokens.push(accessToken);
+    await pdf.save();
+
+    // Add the access token to the response
+    const pdfData = pdf.toObject();
+    (pdfData as any).accessToken = accessToken;
+
+    res.json(pdfData);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch PDF' });
   }
