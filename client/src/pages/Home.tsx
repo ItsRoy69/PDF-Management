@@ -1,60 +1,61 @@
-import { Container, Typography, Button, Box } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import '../styles/Home.css';
 
 const Home = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
   return (
-    <Container>
-      <Box
-        sx={{
-          mt: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Typography variant="h2" component="h1" gutterBottom>
-          PDF Management & Collaboration System
-        </Typography>
-        <Typography variant="h5" component="h2" gutterBottom>
-          Upload, share, and collaborate on PDF documents
-        </Typography>
-        {isAuthenticated ? (
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            onClick={() => navigate('/dashboard')}
-            sx={{ mt: 4 }}
-          >
-            Go to Dashboard
-          </Button>
-        ) : (
-          <Box sx={{ mt: 4 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
-              onClick={() => navigate('/login')}
-              sx={{ mr: 2 }}
+    <div className="home-container">
+      <div className="hero-section">
+        <div className="hero-content">
+          <h1 className="hero-title">
+            PDF Management & Collaboration
+          </h1>
+          <p className="hero-subtitle">
+            Streamline your document workflow with our powerful PDF management solution
+          </p>
+          <div className="features">
+            <div className="feature-item">
+              <span className="feature-icon">📄</span>
+              <span>Easy Upload</span>
+            </div>
+            <div className="feature-item">
+              <span className="feature-icon">🤝</span>
+              <span>Real-time Collaboration</span>
+            </div>
+            <div className="feature-item">
+              <span className="feature-icon">🔒</span>
+              <span>Secure Storage</span>
+            </div>
+          </div>
+          {isAuthenticated ? (
+            <button
+              className="primary-button"
+              onClick={() => navigate('/dashboard')}
             >
-              Login
-            </Button>
-            <Button
-              variant="outlined"
-              color="primary"
-              size="large"
-              onClick={() => navigate('/register')}
-            >
-              Register
-            </Button>
-          </Box>
-        )}
-      </Box>
-    </Container>
+              Go to Dashboard
+            </button>
+          ) : (
+            <div className="button-group">
+              <button
+                className="primary-button"
+                onClick={() => navigate('/login')}
+              >
+                Get Started
+              </button>
+              <button
+                className="secondary-button"
+                onClick={() => navigate('/register')}
+              >
+                Create Account
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 

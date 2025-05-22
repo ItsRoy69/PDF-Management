@@ -1,0 +1,249 @@
+.register-component {
+  display: flex;
+  min-height: 100vh;
+}
+
+.register-left-panel {
+  background-color: #0366ff;
+  color: #fff;
+  width: 40%;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.register-logo-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.register-logo-avatar {
+  background-color: #fff !important;
+  color: #0366ff !important;
+  margin-right: 8px;
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.register-title {
+  margin-bottom: 16px;
+  line-height: 1.1;
+}
+
+.register-subtitle {
+  margin-bottom: 48px;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.register-testimonial {
+  background-color: rgba(0, 0, 0, 0.10);
+  padding: 16px;
+  border-radius: 24px;
+  color: #fff;
+}
+
+.register-testimonial-title {
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.register-testimonial-text {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.register-testimonial-author {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.register-testimonial-avatar {
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.register-testimonial-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.register-testimonial-rating {
+  margin-left: 8px;
+  color: #ffd700;
+  font-size: 18px;
+}
+
+.register-dots-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.register-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #fff;
+  border-radius: 50%;
+  margin: 0 4px;
+}
+
+.register-dot-inactive {
+  opacity: 0.5;
+}
+
+.register-right-panel {
+  flex: 1;
+  padding: 40px;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.register-stepper {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  position: relative;
+}
+
+.register-stepper::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #e0e0e0;
+  z-index: 1;
+}
+
+.register-step {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.register-step-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  margin-bottom: 8px;
+}
+
+.register-step-circle.active {
+  background-color: #0366ff;
+}
+
+.register-step-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.register-form-title {
+  margin-bottom: 24px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.register-error {
+  color: #d32f2f;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.register-form {
+  width: 100%;
+}
+
+.register-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.register-form-field {
+  position: relative;
+}
+
+.register-form-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.register-form-field input,
+.register-form-field select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.register-form-field input:focus,
+.register-form-field select:focus {
+  outline: none;
+  border-color: #0366ff;
+}
+
+.register-form-field input.error,
+.register-form-field select.error {
+  border-color: #d32f2f;
+}
+
+.error-message {
+  color: #d32f2f;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.phone-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.phone-flag {
+  position: absolute;
+  left: 12px;
+  font-size: 16px;
+}
+
+.phone-input-container input {
+  padding-left: 40px;
+}
+
+.register-submit-button {
+  width: 100%;
+  height: 48px;
+  background-color: #0366ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.register-submit-button:hover {
+  background-color: #0356d6;
+}
+
+.register-submit-button:disabled {
+  background-color: #e0e0e0;
+  cursor: not-allowed;
+} 
