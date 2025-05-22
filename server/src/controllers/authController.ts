@@ -40,7 +40,6 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
     const { name, email, password } = req.body;
     console.log('Registration attempt for email:', email);
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       console.log('Registration failed: User already exists');
@@ -48,7 +47,6 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
       return;
     }
 
-    // Create new user
     const user = new User({
       name,
       email,
@@ -58,7 +56,6 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
     await user.save();
     console.log('User registered successfully:', email);
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET || 'your-secret-key',
@@ -84,7 +81,6 @@ export const login = async (req: LoginRequest, res: Response): Promise<void> => 
     const { email, password } = req.body;
     console.log('Login attempt for email:', email);
 
-    // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
       console.log('Login failed: User not found');
@@ -92,7 +88,6 @@ export const login = async (req: LoginRequest, res: Response): Promise<void> => 
       return;
     }
 
-    // Verify password
     console.log('Comparing passwords for user:', email);
     const isMatch = await bcrypt.compare(password, user.password);
     console.log('Password match result:', isMatch);
@@ -105,7 +100,6 @@ export const login = async (req: LoginRequest, res: Response): Promise<void> => 
 
     console.log('Login successful for user:', email);
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET || 'your-secret-key',
@@ -131,29 +125,23 @@ export const forgotPassword = async (req: ForgotPasswordRequest, res: Response):
     const { email } = req.body;
     console.log('Password reset requested for email:', email);
 
-    // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
-      // Don't reveal that the user doesn't exist for security reasons
       console.log('Password reset requested for non-existent user:', email);
       res.status(200).json({ message: 'If an account with that email exists, a password reset link has been sent.' });
       return;
     }
 
-    // Generate reset token
     const resetToken = crypto.randomBytes(20).toString('hex');
     
-    // Set token and expiration (1 hour from now)
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
+    user.resetPasswordExpires = new Date(Date.now() + 3600000);
     
     await user.save();
-    
-    // Create reset URL
+
     const clientURL = process.env.CLIENT_URL || 'http://localhost:3000';
     const resetURL = `${clientURL}/reset-password/${resetToken}`;
     
-    // Send email with reset link
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -186,7 +174,6 @@ export const validateResetToken = async (req: Request, res: Response): Promise<v
   try {
     const { token } = req.params;
     
-    // Find user with matching token that hasn't expired
     const user = await User.findOne({
       resetPasswordToken: token,
       resetPasswordExpires: { $gt: Date.now() }
@@ -210,7 +197,6 @@ export const resetPassword = async (req: ResetPasswordRequest, res: Response): P
     const { token } = req.params;
     const { password } = req.body;
     
-    // Find user with matching token that hasn't expired
     const user = await User.findOne({
       resetPasswordToken: token,
       resetPasswordExpires: { $gt: Date.now() }
@@ -222,7 +208,6 @@ export const resetPassword = async (req: ResetPasswordRequest, res: Response): P
       return;
     }
     
-    // Update password and clear reset token fields
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
@@ -230,7 +215,6 @@ export const resetPassword = async (req: ResetPasswordRequest, res: Response): P
     await user.save();
     console.log('Password reset successful for user:', user.email);
     
-    // Generate new JWT token for auto-login
     const newToken = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET || 'your-secret-key',

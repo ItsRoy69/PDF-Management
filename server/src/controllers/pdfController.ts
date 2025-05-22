@@ -1,12 +1,12 @@
-import { Request, Response } from 'express';
-import { PDF, IPDF } from '../models/PDF';
-import { User, IUser } from '../models/User';
-import crypto from 'crypto';
-import mongoose from 'mongoose';
-import appwriteUpload from '../utils/appwriteUpload';
-import axios from 'axios';
-import jwt from 'jsonwebtoken';
-import { sendInvitationEmail } from '../services/emailService';
+import { Request, Response } from "express";
+import { PDF, IPDF } from "../models/PDF";
+import { User, IUser } from "../models/User";
+import crypto from "crypto";
+import mongoose from "mongoose";
+import appwriteUpload from "../utils/appwriteUpload";
+import axios from "axios";
+import jwt from "jsonwebtoken";
+import { sendInvitationEmail } from "../services/emailService";
 
 interface AuthRequest extends Request {
   user?: {
@@ -24,154 +24,164 @@ interface GuestUser {
 interface Comment {
   _id: mongoose.Types.ObjectId;
   text: string;
-  user: mongoose.Types.ObjectId | {
-    name: string;
-    email: string;
-  };
+  user:
+    | mongoose.Types.ObjectId
+    | {
+        name: string;
+        email: string;
+      };
   createdAt: Date;
   replies?: {
     _id: mongoose.Types.ObjectId;
     text: string;
-    user: mongoose.Types.ObjectId | {
-      name: string;
-      email: string;
-    };
+    user:
+      | mongoose.Types.ObjectId
+      | {
+          name: string;
+          email: string;
+        };
     createdAt: Date;
     replies?: {
       _id: mongoose.Types.ObjectId;
       text: string;
-      user: mongoose.Types.ObjectId | {
-        name: string;
-        email: string;
-      };
+      user:
+        | mongoose.Types.ObjectId
+        | {
+            name: string;
+            email: string;
+          };
       createdAt: Date;
     }[];
   }[];
 }
 
-export const uploadPDF = async (req: AuthRequest, res: Response): Promise<void> => {
+export const uploadPDF = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     if (!req.file) {
-      res.status(400).json({ error: 'No file uploaded' });
+      res.status(400).json({ error: "No file uploaded" });
       return;
     }
 
     if (!req.user) {
-      res.status(401).json({ error: 'User not authenticated' });
+      res.status(401).json({ error: "User not authenticated" });
       return;
     }
 
-    // Convert file buffer to base64
-    const base64String = `data:application/pdf;base64,${req.file.buffer.toString('base64')}`;
-    
-    // Upload to Appwrite
+    const base64String = `data:application/pdf;base64,${req.file.buffer.toString(
+      "base64"
+    )}`;
+
     const fileUrl = await appwriteUpload.saveFile(base64String);
 
     const title = req.body.title || req.file.originalname;
-    
+
     const pdf = new PDF({
       title,
       name: title,
       filename: req.file.originalname,
       originalName: req.file.originalname,
       fileUrl: fileUrl,
-      owner: req.user._id
+      owner: req.user._id,
     });
 
     await pdf.save();
     res.status(201).json(pdf);
   } catch (error) {
-    console.error('PDF upload error:', error);
+    console.error("PDF upload error:", error);
     if (error instanceof Error) {
       res.status(500).json({ error: `Upload failed: ${error.message}` });
     } else {
-      res.status(500).json({ error: 'Upload failed: An unexpected error occurred' });
+      res
+        .status(500)
+        .json({ error: "Upload failed: An unexpected error occurred" });
     }
   }
 };
 
-export const getPDFs = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getPDFs = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     const pdfs = await PDF.find({
-      $or: [
-        { owner: req.user!._id },
-        { sharedWith: req.user!._id }
-      ]
-    }).populate('owner', 'name email');
+      $or: [{ owner: req.user!._id }, { sharedWith: req.user!._id }],
+    }).populate("owner", "name email");
 
     res.json(pdfs);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch PDFs' });
+    res.status(500).json({ error: "Failed to fetch PDFs" });
   }
 };
 
-export const getPDF = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getPDF = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     const pdf = await PDF.findOne({
       _id: req.params.id,
-      $or: [
-        { owner: req.user!._id },
-        { sharedWith: req.user!._id }
-      ]
-    }).populate('owner', 'name email')
-      .populate('comments.user', 'name email')
-      .populate('comments.replies.user', 'name email');
+      $or: [{ owner: req.user!._id }, { sharedWith: req.user!._id }],
+    })
+      .populate("owner", "name email")
+      .populate("comments.user", "name email")
+      .populate("comments.replies.user", "name email");
 
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
-    // Generate a temporary access token for this viewing session
-    const accessToken = crypto.randomBytes(16).toString('hex');
-    
-    // Store the access token in the PDF document
+    const accessToken = crypto.randomBytes(16).toString("hex");
+
     if (!pdf.accessTokens) {
       pdf.accessTokens = [];
     }
-    
-    // Limit the number of access tokens to prevent unlimited growth
+
     if (pdf.accessTokens.length > 100) {
-      // If we have too many tokens, remove the oldest ones
       pdf.accessTokens = pdf.accessTokens.slice(-50);
     }
-    
+
     pdf.accessTokens.push(accessToken);
     await pdf.save();
 
-    // Add the access token to the response
     const pdfData = pdf.toObject();
     (pdfData as any).accessToken = accessToken;
 
     res.json(pdfData);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch PDF' });
+    res.status(500).json({ error: "Failed to fetch PDF" });
   }
 };
 
-export const sharePDF = async (req: AuthRequest, res: Response): Promise<void> => {
+export const sharePDF = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email }).exec();
 
     if (!user) {
-      res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: "User not found" });
       return;
     }
 
     const pdf = await PDF.findOne({
       _id: req.params.id,
-      owner: req.user!._id
+      owner: req.user!._id,
     });
 
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
     const userId = user._id as mongoose.Types.ObjectId;
-    if (pdf.sharedWith.some(id => id.toString() === userId.toString())) {
-      res.status(400).json({ error: 'PDF already shared with this user' });
+    if (pdf.sharedWith.some((id) => id.toString() === userId.toString())) {
+      res.status(400).json({ error: "PDF already shared with this user" });
       return;
     }
 
@@ -180,23 +190,23 @@ export const sharePDF = async (req: AuthRequest, res: Response): Promise<void> =
 
     res.json(pdf);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to share PDF' });
+    res.status(500).json({ error: "Failed to share PDF" });
   }
 };
 
-export const addComment = async (req: AuthRequest, res: Response): Promise<void> => {
+export const addComment = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     const { text } = req.body;
     const pdf = await PDF.findOne({
       _id: req.params.id,
-      $or: [
-        { owner: req.user!._id },
-        { sharedWith: req.user!._id }
-      ]
+      $or: [{ owner: req.user!._id }, { sharedWith: req.user!._id }],
     });
 
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
@@ -205,37 +215,39 @@ export const addComment = async (req: AuthRequest, res: Response): Promise<void>
       text,
       user: req.user!._id,
       createdAt: new Date(),
-      replies: []
+      replies: [],
     };
 
     pdf.comments.push(newComment);
     await pdf.save();
     res.json(pdf);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add comment' });
+    res.status(500).json({ error: "Failed to add comment" });
   }
 };
 
-export const addReply = async (req: AuthRequest, res: Response): Promise<void> => {
+export const addReply = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     const { text } = req.body;
     const { id, commentId } = req.params;
     const pdf = await PDF.findOne({
       _id: id,
-      $or: [
-        { owner: req.user!._id },
-        { sharedWith: req.user!._id }
-      ]
+      $or: [{ owner: req.user!._id }, { sharedWith: req.user!._id }],
     });
 
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
-    const comment = (pdf.comments as Comment[]).find(c => c._id.toString() === commentId);
+    const comment = (pdf.comments as Comment[]).find(
+      (c) => c._id.toString() === commentId
+    );
     if (!comment) {
-      res.status(404).json({ error: 'Comment not found' });
+      res.status(404).json({ error: "Comment not found" });
       return;
     }
 
@@ -248,244 +260,253 @@ export const addReply = async (req: AuthRequest, res: Response): Promise<void> =
       text,
       user: req.user!._id,
       createdAt: new Date(),
-      replies: []
+      replies: [],
     };
 
     comment.replies.push(newReply);
     await pdf.save();
     res.json(pdf);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add reply' });
+    res.status(500).json({ error: "Failed to add reply" });
   }
 };
 
-export const generateShareLink = async (req: AuthRequest, res: Response): Promise<void> => {
+export const generateShareLink = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     const pdf = await PDF.findOne({
       _id: req.params.id,
-      owner: req.user!._id
+      owner: req.user!._id,
     });
 
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
-    // Generate a unique token
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = crypto.randomBytes(32).toString("hex");
     pdf.shareToken = token;
     await pdf.save();
 
-    // Generate the shareable link
-    const clientUrl = process.env.CLIENT_URL || '';
+    const clientUrl = process.env.CLIENT_URL || "";
     const sharePath = `/shared/${token}`;
     const shareLink = clientUrl ? `${clientUrl}${sharePath}` : sharePath;
-    
+
     res.json({ link: shareLink });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate share link' });
+    res.status(500).json({ error: "Failed to generate share link" });
   }
 };
 
-export const inviteUsersByEmail = async (req: AuthRequest, res: Response): Promise<void> => {
+export const inviteUsersByEmail = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     const { emails } = req.body;
-    
+
     if (!emails || !Array.isArray(emails) || emails.length === 0) {
-      res.status(400).json({ error: 'Valid email addresses are required' });
+      res.status(400).json({ error: "Valid email addresses are required" });
       return;
     }
 
     const pdf = await PDF.findOne({
       _id: req.params.id,
-      owner: req.user!._id
-    }).populate<{ owner: IUser }>('owner', 'name email');
+      owner: req.user!._id,
+    }).populate<{ owner: IUser }>("owner", "name email");
 
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
-    // If shareToken doesn't exist, create one
     if (!pdf.shareToken) {
-      pdf.shareToken = crypto.randomBytes(32).toString('hex');
+      pdf.shareToken = crypto.randomBytes(32).toString("hex");
     }
-    
-    // Add emails to the invited list if they're not already there
+
     const newInvites: string[] = [];
-    emails.forEach(email => {
+    emails.forEach((email) => {
       if (!pdf.invitedEmails.includes(email)) {
         pdf.invitedEmails.push(email);
         newInvites.push(email);
       }
     });
-    
+
     await pdf.save();
 
-    // Generate the shareable link
-    const clientUrl = process.env.CLIENT_URL || '';
+    const clientUrl = process.env.CLIENT_URL || "";
     const sharePath = `/shared/${pdf.shareToken}`;
     const shareLink = clientUrl ? `${clientUrl}${sharePath}` : sharePath;
-    
-    // Send email invitations to new invites
-    const emailPromises = newInvites.map(email => 
+
+    const emailPromises = newInvites.map((email) =>
       sendInvitationEmail(
         email,
-        pdf.name || 'PDF Document',
+        pdf.name || "PDF Document",
         shareLink,
-        pdf.owner?.name || 'A user'
+        pdf.owner?.name || "A user"
       )
     );
-    
-    // Wait for all emails to be sent, but don't block the response
+
     Promise.all(emailPromises)
-      .then(results => {
-        const successCount = results.filter(result => result).length;
-        console.log(`Successfully sent ${successCount} of ${newInvites.length} invitation emails`);
+      .then((results) => {
+        const successCount = results.filter((result) => result).length;
+        console.log(
+          `Successfully sent ${successCount} of ${newInvites.length} invitation emails`
+        );
       })
-      .catch(error => {
-        console.error('Error sending invitation emails:', error);
+      .catch((error) => {
+        console.error("Error sending invitation emails:", error);
       });
-    
-    res.json({ 
+
+    res.json({
       link: shareLink,
-      invitedEmails: pdf.invitedEmails 
+      invitedEmails: pdf.invitedEmails,
     });
   } catch (error) {
-    console.error('Failed to invite users:', error);
-    res.status(500).json({ error: 'Failed to invite users' });
+    console.error("Failed to invite users:", error);
+    res.status(500).json({ error: "Failed to invite users" });
   }
 };
 
-export const getInvitedUsers = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getInvitedUsers = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     const pdf = await PDF.findOne({
       _id: req.params.id,
-      owner: req.user!._id
+      owner: req.user!._id,
     });
 
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
-    res.json({ 
+    res.json({
       invitedEmails: pdf.invitedEmails,
-      sharedWith: pdf.sharedWith
+      sharedWith: pdf.sharedWith,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to get invited users' });
+    res.status(500).json({ error: "Failed to get invited users" });
   }
 };
 
-export const removeInvitedEmail = async (req: AuthRequest, res: Response): Promise<void> => {
+export const removeInvitedEmail = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     const { email } = req.params;
-    
+
     const pdf = await PDF.findOne({
       _id: req.params.id,
-      owner: req.user!._id
+      owner: req.user!._id,
     });
 
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
-    // Remove the email from the invited list
-    pdf.invitedEmails = pdf.invitedEmails.filter(e => e !== email);
+    pdf.invitedEmails = pdf.invitedEmails.filter((e) => e !== email);
     await pdf.save();
 
-    res.json({ 
+    res.json({
       success: true,
-      invitedEmails: pdf.invitedEmails 
+      invitedEmails: pdf.invitedEmails,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to remove invited user' });
+    res.status(500).json({ error: "Failed to remove invited user" });
   }
 };
 
-export const getSharedPDF = async (req: Request, res: Response): Promise<void> => {
+export const getSharedPDF = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const pdf = await PDF.findOne({ shareToken: req.params.token })
-      .populate('comments.user', 'name email')
-      .populate('comments.replies.user', 'name email');
+      .populate("comments.user", "name email")
+      .populate("comments.replies.user", "name email");
 
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
-    // Check if user is invited (if email is provided in the query)
     const requestEmail = req.query.email as string;
     if (requestEmail && !pdf.invitedEmails.includes(requestEmail)) {
-      // If the email check is enabled and the email is not in the invited list
       const authHeader = req.headers.authorization;
       let isAuthenticated = false;
-      
-      // Check if the user is authenticated and is the owner or has the PDF shared with them
-      if (authHeader && authHeader.startsWith('Bearer ')) {
+
+      if (authHeader && authHeader.startsWith("Bearer ")) {
         try {
-          const token = authHeader.split(' ')[1];
-          const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
+          const token = authHeader.split(" ")[1];
+          const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET as string
+          ) as { id: string };
           const userId = new mongoose.Types.ObjectId(decoded.id);
-          
-          // Check if this user is the owner or has the PDF shared with them
-          if (pdf.owner.equals(userId) || pdf.sharedWith.some(id => id.equals(userId))) {
+          if (
+            pdf.owner.equals(userId) ||
+            pdf.sharedWith.some((id) => id.equals(userId))
+          ) {
             isAuthenticated = true;
           }
         } catch (error) {
-          console.error('Invalid auth token:', error);
+          console.error("Invalid auth token:", error);
         }
       }
-      
-      // If not authenticated and not in the invited list
+
       if (!isAuthenticated) {
-        res.status(403).json({ error: 'You are not authorized to view this PDF' });
+        res
+          .status(403)
+          .json({ error: "You are not authorized to view this PDF" });
         return;
       }
     }
 
-    // Generate a temporary access token for this viewing session
-    const accessToken = crypto.randomBytes(16).toString('hex');
-    
-    // Store the access token in the PDF document
+    const accessToken = crypto.randomBytes(16).toString("hex");
+
     if (!pdf.accessTokens) {
       pdf.accessTokens = [];
     }
-    
-    // Limit the number of access tokens to prevent unlimited growth
+
     if (pdf.accessTokens.length > 100) {
-      // If we have too many tokens, remove the oldest ones
       pdf.accessTokens = pdf.accessTokens.slice(-50);
     }
-    
+
     pdf.accessTokens.push(accessToken);
     await pdf.save();
 
-    // Add the access token to the response
     const pdfData = pdf.toObject();
     (pdfData as any).accessToken = accessToken;
 
     res.json(pdfData);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch shared PDF' });
+    res.status(500).json({ error: "Failed to fetch shared PDF" });
   }
 };
 
-export const addSharedComment = async (req: Request, res: Response): Promise<void> => {
+export const addSharedComment = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { text, guestName } = req.body;
     const pdf = await PDF.findOne({ shareToken: req.params.token });
 
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
     const guestUser = {
       name: guestName,
-      email: `guest-${Date.now()}@example.com`
+      email: `guest-${Date.now()}@example.com`,
     };
 
     const newComment = {
@@ -493,32 +514,37 @@ export const addSharedComment = async (req: Request, res: Response): Promise<voi
       text,
       user: guestUser,
       createdAt: new Date(),
-      replies: []
+      replies: [],
     };
 
     pdf.comments.push(newComment);
     await pdf.save();
     res.json(pdf);
   } catch (error) {
-    console.error('Failed to add comment:', error);
-    res.status(500).json({ error: 'Failed to add comment' });
+    console.error("Failed to add comment:", error);
+    res.status(500).json({ error: "Failed to add comment" });
   }
 };
 
-export const addSharedReply = async (req: Request, res: Response): Promise<void> => {
+export const addSharedReply = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { text, guestName } = req.body;
     const { token, commentId } = req.params;
     const pdf = await PDF.findOne({ shareToken: token });
 
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
-    const comment = (pdf.comments as Comment[]).find(c => c._id.toString() === commentId);
+    const comment = (pdf.comments as Comment[]).find(
+      (c) => c._id.toString() === commentId
+    );
     if (!comment) {
-      res.status(404).json({ error: 'Comment not found' });
+      res.status(404).json({ error: "Comment not found" });
       return;
     }
 
@@ -528,50 +554,54 @@ export const addSharedReply = async (req: Request, res: Response): Promise<void>
 
     const guestUser = {
       name: guestName,
-      email: `guest-${Date.now()}@example.com`
+      email: `guest-${Date.now()}@example.com`,
     };
 
     comment.replies.push({
       _id: new mongoose.Types.ObjectId(),
       text,
       user: guestUser,
-      createdAt: new Date()
+      createdAt: new Date(),
     });
 
     await pdf.save();
     res.json(pdf);
   } catch (error) {
-    console.error('Failed to add reply:', error);
-    res.status(500).json({ error: 'Failed to add reply' });
+    console.error("Failed to add reply:", error);
+    res.status(500).json({ error: "Failed to add reply" });
   }
 };
 
-export const addNestedReply = async (req: AuthRequest, res: Response): Promise<void> => {
+export const addNestedReply = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     const { text } = req.body;
     const { id, commentId, replyId } = req.params;
     const pdf = await PDF.findOne({
       _id: id,
-      $or: [
-        { owner: req.user!._id },
-        { sharedWith: req.user!._id }
-      ]
+      $or: [{ owner: req.user!._id }, { sharedWith: req.user!._id }],
     });
 
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
-    const comment = (pdf.comments as Comment[]).find(c => c._id.toString() === commentId);
+    const comment = (pdf.comments as Comment[]).find(
+      (c) => c._id.toString() === commentId
+    );
     if (!comment) {
-      res.status(404).json({ error: 'Comment not found' });
+      res.status(404).json({ error: "Comment not found" });
       return;
     }
 
-    const parentReply = comment.replies?.find(r => r._id.toString() === replyId);
+    const parentReply = comment.replies?.find(
+      (r) => r._id.toString() === replyId
+    );
     if (!parentReply) {
-      res.status(404).json({ error: 'Reply not found' });
+      res.status(404).json({ error: "Reply not found" });
       return;
     }
 
@@ -583,37 +613,44 @@ export const addNestedReply = async (req: AuthRequest, res: Response): Promise<v
       _id: new mongoose.Types.ObjectId(),
       text,
       user: req.user!._id,
-      createdAt: new Date()
+      createdAt: new Date(),
     });
 
     await pdf.save();
     res.json(pdf);
   } catch (error) {
-    console.error('Failed to add nested reply:', error);
-    res.status(500).json({ error: 'Failed to add nested reply' });
+    console.error("Failed to add nested reply:", error);
+    res.status(500).json({ error: "Failed to add nested reply" });
   }
 };
 
-export const addSharedNestedReply = async (req: Request, res: Response): Promise<void> => {
+export const addSharedNestedReply = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { text, guestName } = req.body;
     const { token, commentId, replyId } = req.params;
     const pdf = await PDF.findOne({ shareToken: token });
 
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
-    const comment = (pdf.comments as Comment[]).find(c => c._id.toString() === commentId);
+    const comment = (pdf.comments as Comment[]).find(
+      (c) => c._id.toString() === commentId
+    );
     if (!comment) {
-      res.status(404).json({ error: 'Comment not found' });
+      res.status(404).json({ error: "Comment not found" });
       return;
     }
 
-    const parentReply = comment.replies?.find(r => r._id.toString() === replyId);
+    const parentReply = comment.replies?.find(
+      (r) => r._id.toString() === replyId
+    );
     if (!parentReply) {
-      res.status(404).json({ error: 'Reply not found' });
+      res.status(404).json({ error: "Reply not found" });
       return;
     }
 
@@ -623,80 +660,83 @@ export const addSharedNestedReply = async (req: Request, res: Response): Promise
 
     const guestUser = {
       name: guestName,
-      email: `guest-${Date.now()}@example.com`
+      email: `guest-${Date.now()}@example.com`,
     };
 
     parentReply.replies.push({
       _id: new mongoose.Types.ObjectId(),
       text,
       user: guestUser,
-      createdAt: new Date()
+      createdAt: new Date(),
     });
 
     await pdf.save();
     res.json(pdf);
   } catch (error) {
-    console.error('Failed to add nested reply:', error);
-    res.status(500).json({ error: 'Failed to add nested reply' });
+    console.error("Failed to add nested reply:", error);
+    res.status(500).json({ error: "Failed to add nested reply" });
   }
 };
 
-export const proxyPdfFile = async (req: Request, res: Response): Promise<void> => {
+export const proxyPdfFile = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { fileId } = req.params;
     const { accessToken } = req.query;
-    
+
     if (!fileId) {
-      res.status(400).json({ error: 'File ID is required' });
+      res.status(400).json({ error: "File ID is required" });
       return;
     }
 
-    // Check for authorization
     let isAuthorized = false;
     let userId: mongoose.Types.ObjectId | null = null;
 
-    // Check if request has authorization token (logged in user)
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    if (authHeader && authHeader.startsWith("Bearer ")) {
       try {
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
+          id: string;
+        };
         userId = new mongoose.Types.ObjectId(decoded.id);
-        // User is authenticated, but we still need to check if they own or have access to the PDF
       } catch (error) {
-        console.error('Invalid auth token:', error);
+        console.error("Invalid auth token:", error);
       }
     }
 
-    // Find the PDF that contains this file ID
     const pdfFileUrl = new RegExp(fileId);
     const pdf = await PDF.findOne({ fileUrl: pdfFileUrl });
-    
+
     if (!pdf) {
-      res.status(404).json({ error: 'PDF not found' });
+      res.status(404).json({ error: "PDF not found" });
       return;
     }
 
-    // Check if user is authorized to access this PDF
     if (userId) {
-      // User is authenticated, check if they own or have access to the PDF
-      if (pdf.owner.equals(userId) || pdf.sharedWith.some(id => id.equals(userId))) {
-        isAuthorized = true;
-      }
-    }
-    
-    // If not authorized by user ID, check access token
-    if (!isAuthorized && accessToken) {
-      // Check if the provided access token exists in the PDF's accessTokens array
-      if (pdf.accessTokens && pdf.accessTokens.includes(accessToken as string)) {
+      if (
+        pdf.owner.equals(userId) ||
+        pdf.sharedWith.some((id) => id.equals(userId))
+      ) {
         isAuthorized = true;
       }
     }
 
-    // If still not authorized, reject access
+    if (!isAuthorized && accessToken) {
+      if (
+        pdf.accessTokens &&
+        pdf.accessTokens.includes(accessToken as string)
+      ) {
+        isAuthorized = true;
+      }
+    }
+
     if (!isAuthorized) {
-      res.status(403).json({ 
-        error: 'Unauthorized access. Please access this PDF through its shared link.'
+      res.status(403).json({
+        error:
+          "Unauthorized access. Please access this PDF through its shared link.",
       });
       return;
     }
@@ -705,108 +745,109 @@ export const proxyPdfFile = async (req: Request, res: Response): Promise<void> =
     const appwriteProjectId = process.env.APPWRITE_PROJECT_ID;
     const appwriteBucketId = process.env.APPWRITE_BUCKET_ID;
     const appwriteApiKey = process.env.APPWRITE_API_KEY;
-    
-    if (!appwriteEndpoint || !appwriteProjectId || !appwriteBucketId || !appwriteApiKey) {
-      res.status(500).json({ error: 'Server configuration error' });
+
+    if (
+      !appwriteEndpoint ||
+      !appwriteProjectId ||
+      !appwriteBucketId ||
+      !appwriteApiKey
+    ) {
+      res.status(500).json({ error: "Server configuration error" });
       return;
     }
-
-    // Updated URL format to match Appwrite's API specification
     const fileUrl = `${appwriteEndpoint}/storage/buckets/${appwriteBucketId}/files/${fileId}/view`;
-    
-    console.log(`[PDF Proxy] Attempting to proxy PDF from Appwrite URL: ${fileUrl}`);
+
+    console.log(
+      `[PDF Proxy] Attempting to proxy PDF from Appwrite URL: ${fileUrl}`
+    );
     console.log(`[PDF Proxy] Request headers:`, req.headers);
-    
+
     try {
       const response = await axios({
-        method: 'get',
+        method: "get",
         url: fileUrl,
-        responseType: 'arraybuffer',
+        responseType: "arraybuffer",
         headers: {
-          'X-Appwrite-Project': appwriteProjectId,
-          'X-Appwrite-Key': appwriteApiKey,
-          'Accept': 'application/pdf' // Explicitly request PDF content
-        }
+          "X-Appwrite-Project": appwriteProjectId,
+          "X-Appwrite-Key": appwriteApiKey,
+          Accept: "application/pdf",
+        },
       });
-      
-      // Log some information about the response
-      console.log(`[PDF Proxy] Received data from Appwrite. Size: ${response.data.length} bytes`);
-      console.log(`[PDF Proxy] Response content type: ${response.headers['content-type']}`);
-      console.log(`[PDF Proxy] Response headers:`, response.headers);
-      
-      // Check if we received a PDF or binary data
-      const contentType = response.headers['content-type'];
-      
-      // Check for PDF magic number (%PDF-)
+
+      const contentType = response.headers["content-type"];
+
       const data = Buffer.from(response.data);
       if (data.length >= 5) {
-        const magicNumber = data.toString('ascii', 0, 5);
+        const magicNumber = data.toString("ascii", 0, 5);
         console.log(`[PDF Proxy] File magic number: "${magicNumber}"`);
-        
-        if (magicNumber === '%PDF-') {
-          // This is a valid PDF file by magic number check
-          console.log('[PDF Proxy] PDF magic number detected in the response');
-          
-          // Set appropriate headers
-          res.setHeader('Content-Type', 'application/pdf');
-          res.setHeader('Content-Length', data.length);
-          res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
-          res.setHeader('Cache-Control', 'no-cache');
-          
-          // Send the PDF data
+
+        if (magicNumber === "%PDF-") {
+          console.log("[PDF Proxy] PDF magic number detected in the response");
+
+          res.setHeader("Content-Type", "application/pdf");
+          res.setHeader("Content-Length", data.length);
+          res.setHeader(
+            "Content-Disposition",
+            'inline; filename="document.pdf"'
+          );
+          res.setHeader("Cache-Control", "no-cache");
+
           res.status(200).send(data);
-          console.log('[PDF Proxy] Successfully sent PDF data to client');
+          console.log("[PDF Proxy] Successfully sent PDF data to client");
           return;
         }
       }
-      
-      // If content type is HTML or not PDF, and we didn't detect PDF magic number
-      if (!contentType || !contentType.includes('application/pdf')) {
-        console.error('Received non-PDF content type:', contentType);
-        
-        // If the response is text/html or similar, log a portion for debugging
-        if (contentType && (contentType.includes('text/html') || contentType.includes('text/plain'))) {
-          const textContent = Buffer.from(response.data).toString('utf8').substring(0, 500);
-          console.error('Content preview (first 500 chars):', textContent);
-          
-          // Instead of returning an error, try to redirect to the direct Appwrite URL
+
+      if (!contentType || !contentType.includes("application/pdf")) {
+        console.error("Received non-PDF content type:", contentType);
+
+        if (
+          contentType &&
+          (contentType.includes("text/html") ||
+            contentType.includes("text/plain"))
+        ) {
+          const textContent = Buffer.from(response.data)
+            .toString("utf8")
+            .substring(0, 500);
+          console.error("Content preview (first 500 chars):", textContent);
+
           const directUrl = `${appwriteEndpoint}/storage/buckets/${appwriteBucketId}/files/${fileId}/view?project=${appwriteProjectId}`;
           res.redirect(directUrl);
           return;
         }
       }
-      
-      // Set appropriate headers for any other binary data
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Length', response.data.length);
-      res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
-      res.setHeader('Cache-Control', 'no-cache');
-      
-      // Send the data
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Length", response.data.length);
+      res.setHeader("Content-Disposition", 'inline; filename="document.pdf"');
+      res.setHeader("Cache-Control", "no-cache");
+
       res.status(200).send(response.data);
     } catch (error) {
-      console.error('Failed to fetch PDF from Appwrite:', error);
+      console.error("Failed to fetch PDF from Appwrite:", error);
       if (axios.isAxiosError(error)) {
-        console.error('Axios error details:', {
+        console.error("Axios error details:", {
           status: error.response?.status,
           statusText: error.response?.statusText,
           headers: error.response?.headers,
-          data: error.response?.data instanceof Buffer 
-            ? 'Binary data' 
-            : typeof error.response?.data === 'string' 
-              ? error.response?.data.substring(0, 200) + '...' 
-              : error.response?.data ? JSON.stringify(error.response?.data).substring(0, 200) + '...' : 'No data'
+          data:
+            error.response?.data instanceof Buffer
+              ? "Binary data"
+              : typeof error.response?.data === "string"
+              ? error.response?.data.substring(0, 200) + "..."
+              : error.response?.data
+              ? JSON.stringify(error.response?.data).substring(0, 200) + "..."
+              : "No data",
         });
-        
-        // Try to redirect to direct URL if there's an error
+
         const directUrl = `${appwriteEndpoint}/storage/buckets/${appwriteBucketId}/files/${fileId}/view?project=${appwriteProjectId}`;
         res.redirect(directUrl);
         return;
       }
-      res.status(404).json({ error: 'PDF file not found or inaccessible' });
+      res.status(404).json({ error: "PDF file not found or inaccessible" });
     }
   } catch (error) {
-    console.error('PDF proxy error:', error);
-    res.status(500).json({ error: 'Failed to proxy PDF file' });
+    console.error("PDF proxy error:", error);
+    res.status(500).json({ error: "Failed to proxy PDF file" });
   }
-}; 
+};

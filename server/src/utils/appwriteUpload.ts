@@ -2,10 +2,7 @@ import { Client, Storage, ID } from 'node-appwrite';
 import dotenv from 'dotenv';
 const { InputFile } = require('node-appwrite/file');
 
-// Load environment variables
 dotenv.config();
-
-// Check required environment variables
 const APPWRITE_ENDPOINT = process.env.APPWRITE_ENDPOINT;
 const APPWRITE_PROJECT_ID = process.env.APPWRITE_PROJECT_ID;
 const APPWRITE_API_KEY = process.env.APPWRITE_API_KEY;
@@ -42,7 +39,6 @@ const appwriteUpload: AppwriteUpload = {
             const fileType = matches[1];
             const base64Data = matches[2];
             
-            // Check if file is either an image or PDF
             if (!fileType.startsWith('image/') && fileType !== 'application/pdf') {
                 throw new Error('Invalid file type: must be an image or PDF');
             }
@@ -51,7 +47,7 @@ const appwriteUpload: AppwriteUpload = {
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
 
             const buffer = Buffer.from(base64Data, 'base64');
-            const maxSize = 10 * 1024 * 1024; // 10MB limit
+            const maxSize = 10 * 1024 * 1024;
             if (buffer.length > maxSize) {
                 throw new Error(`File size exceeds maximum limit of ${maxSize} bytes`);
             }

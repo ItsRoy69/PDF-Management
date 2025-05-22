@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Configure email transporter
 const transporter = nodemailer.createTransport({
   service: process.env.EMAIL_SERVICE || 'gmail',
   auth: {
@@ -12,13 +11,6 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-/**
- * Sends an invitation email to a user with a link to access a shared PDF
- * @param recipientEmail Email address of the invited user
- * @param pdfName Name of the PDF being shared
- * @param shareLink Link to access the PDF
- * @param senderName Name of the user sharing the PDF
- */
 export const sendInvitationEmail = async (
   recipientEmail: string,
   pdfName: string,
