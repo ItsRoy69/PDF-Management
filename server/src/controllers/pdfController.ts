@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import appwriteUpload from '../utils/appwriteUpload';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
+import { sendInvitationEmail } from '../services/emailService';
 
 interface AuthRequest extends Request {
   user?: {
@@ -52,8 +53,11 @@ export const uploadPDF = async (req: AuthRequest, res: Response): Promise<void> 
     // Upload to Appwrite
     const fileUrl = await appwriteUpload.saveFile(base64String);
 
+    const title = req.body.title || req.file.originalname;
+    
     const pdf = new PDF({
-      title: req.body.title || req.file.originalname,
+      title,
+      name: title,
       filename: req.file.originalname,
       originalName: req.file.originalname,
       fileUrl: fileUrl,
@@ -253,7 +257,7 @@ export const inviteUsersByEmail = async (req: AuthRequest, res: Response): Promi
     const pdf = await PDF.findOne({
       _id: req.params.id,
       owner: req.user!._id
-    });
+    }).populate<{ owner: IUser }>('owner', 'name email');
 
     if (!pdf) {
       res.status(404).json({ error: 'PDF not found' });
@@ -266,9 +270,11 @@ export const inviteUsersByEmail = async (req: AuthRequest, res: Response): Promi
     }
     
     // Add emails to the invited list if they're not already there
+    const newInvites: string[] = [];
     emails.forEach(email => {
       if (!pdf.invitedEmails.includes(email)) {
         pdf.invitedEmails.push(email);
+        newInvites.push(email);
       }
     });
     
@@ -278,6 +284,26 @@ export const inviteUsersByEmail = async (req: AuthRequest, res: Response): Promi
     const clientUrl = process.env.CLIENT_URL || '';
     const sharePath = `/shared/${pdf.shareToken}`;
     const shareLink = clientUrl ? `${clientUrl}${sharePath}` : sharePath;
+    
+    // Send email invitations to new invites
+    const emailPromises = newInvites.map(email => 
+      sendInvitationEmail(
+        email,
+        pdf.name || 'PDF Document',
+        shareLink,
+        pdf.owner?.name || 'A user'
+      )
+    );
+    
+    // Wait for all emails to be sent, but don't block the response
+    Promise.all(emailPromises)
+      .then(results => {
+        const successCount = results.filter(result => result).length;
+        console.log(`Successfully sent ${successCount} of ${newInvites.length} invitation emails`);
+      })
+      .catch(error => {
+        console.error('Error sending invitation emails:', error);
+      });
     
     res.json({ 
       link: shareLink,

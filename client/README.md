@@ -52,3 +52,28 @@ export default tseslint.config({
   },
 })
 ```
+
+## Email Functionality
+
+The application now includes email notifications for PDF sharing invitations. When you invite users to view a PDF, they will receive an email with a link to access the document.
+
+### Email Configuration
+
+To enable the email functionality, you need to configure the following environment variables in the server's `.env` file:
+
+```
+EMAIL_SERVICE=gmail  # or another email service provider
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password
+```
+
+For Gmail, you'll need to:
+1. Enable 2-Step Verification on your Google account
+2. Generate an App Password specifically for this application
+3. Use that App Password in the EMAIL_PASSWORD field
+
+### Features
+
+- Automatic email notifications when inviting users to view PDFs
+- Personalized invitations including sender name and PDF title
+- Direct access links in the emails

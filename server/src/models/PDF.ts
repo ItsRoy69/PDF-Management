@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 export interface IPDF extends mongoose.Document {
   title: string;
+  name: string;
   filename: string;
   originalName: string;
   fileUrl: string;
@@ -26,6 +27,10 @@ const pdfSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,
+    trim: true
+  },
+  name: {
+    type: String,
     trim: true
   },
   filename: {
