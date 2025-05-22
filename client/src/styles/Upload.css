@@ -1,0 +1,166 @@
+.upload-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  padding-top: 5rem;
+}
+
+.upload-container {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 2rem;
+}
+
+.upload-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #1a202c;
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.form-group {
+  margin-bottom: 2rem;
+}
+
+.title-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  font-size: 1rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.title-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.drop-zone {
+  border: 2px dashed #e2e8f0;
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #f8fafc;
+}
+
+.drop-zone:hover {
+  border-color: #2563eb;
+  background: #f1f5f9;
+}
+
+.drop-zone.dragging {
+  border-color: #2563eb;
+  background: #eff6ff;
+  transform: scale(1.02);
+}
+
+.drop-zone.has-file {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.drop-zone-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  width: 100%;
+}
+
+.upload-icon {
+  font-size: 48px !important;
+  color: #4a5568;
+  margin-bottom: 1rem;
+}
+
+.drop-zone-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 0.5rem;
+}
+
+.drop-zone-subtitle {
+  font-size: 0.875rem;
+  color: #4a5568;
+}
+
+.error-message {
+  color: #dc2626;
+  text-align: center;
+  margin: 1rem 0;
+  font-size: 0.875rem;
+}
+
+.button-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.upload-button {
+  background: #2563eb;
+  color: white;
+  padding: 0.75rem 2rem;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  min-width: 200px;
+  transition: all 0.2s ease;
+}
+
+.upload-button:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.upload-button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .upload-page {
+    padding: 1rem;
+    padding-top: 4rem;
+  }
+
+  .upload-title {
+    font-size: 2rem;
+  }
+
+  .drop-zone {
+    padding: 2rem 1rem;
+  }
+
+  .upload-container {
+    padding: 1.5rem;
+  }
+} 

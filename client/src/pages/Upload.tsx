@@ -1,15 +1,9 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Typography,
-  Box,
-  Button,
-  TextField,
-  Paper,
-  CircularProgress,
-} from '@mui/material';
 import { pdfService } from '../services/api';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import Topbar from '../components/Topbar/Topbar';
+import '../styles/Upload.css';
 
 const Upload = () => {
   const navigate = useNavigate();
@@ -17,6 +11,7 @@ const Upload = () => {
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -30,6 +25,31 @@ const Upload = () => {
       }
     }
   };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const droppedFile = e.dataTransfer.files[0];
+      if (droppedFile.type === 'application/pdf') {
+        setFile(droppedFile);
+        setError('');
+      } else {
+        setError('Please drop a PDF file');
+      }
+    }
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -50,23 +70,28 @@ const Upload = () => {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Upload PDF
-        </Typography>
-        <Paper sx={{ p: 3 }}>
+    <>
+      <Topbar />
+      <div className="upload-page">
+        <h1 className="upload-title">Upload PDF</h1>
+        <div className="upload-container">
           <form onSubmit={handleSubmit}>
-            <Box sx={{ mb: 3 }}>
-              <TextField
-                fullWidth
-                label="Title (optional)"
+            <div className="form-group">
+              <input
+                type="text"
+                className="title-input"
+                placeholder="Enter a title for your PDF (optional)"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter a title for your PDF"
               />
-            </Box>
-            <Box sx={{ mb: 3 }}>
+            </div>
+            
+            <div
+              className={`drop-zone ${isDragging ? 'dragging' : ''} ${file ? 'has-file' : ''}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <input
                 accept="application/pdf"
                 style={{ display: 'none' }}
@@ -74,38 +99,40 @@ const Upload = () => {
                 type="file"
                 onChange={handleFileChange}
               />
-              <label htmlFor="pdf-file">
-                <Button
-                  variant="outlined"
-                  component="span"
-                  fullWidth
-                >
-                  Select PDF File
-                </Button>
+              <label htmlFor="pdf-file" className="drop-zone-label">
+                <CloudUploadIcon className="upload-icon" />
+                <h3 className="drop-zone-title">
+                  {file ? 'File Selected' : 'Drag & Drop PDF here'}
+                </h3>
+                <p className="drop-zone-subtitle">
+                  {file ? file.name : 'or click to browse'}
+                </p>
               </label>
-              {file && (
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Selected file: {file.name}
-                </Typography>
-              )}
-            </Box>
+            </div>
+
             {error && (
-              <Typography color="error" sx={{ mb: 2 }}>
+              <p className="error-message">
                 {error}
-              </Typography>
+              </p>
             )}
-            <Button
-              type="submit"
-              variant="contained"
-              fullWidth
-              disabled={loading || !file}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Upload'}
-            </Button>
+
+            <div className="button-container">
+              <button
+                type="submit"
+                className="upload-button"
+                disabled={loading || !file}
+              >
+                {loading ? (
+                  <div className="loading-spinner"></div>
+                ) : (
+                  'Upload PDF'
+                )}
+              </button>
+            </div>
           </form>
-        </Paper>
-      </Box>
-    </Container>
+        </div>
+      </div>
+    </>
   );
 };
 
