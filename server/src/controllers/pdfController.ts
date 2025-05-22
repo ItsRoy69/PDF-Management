@@ -6,6 +6,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import mongoose from 'mongoose';
 import appwriteUpload from '../utils/appwriteUpload';
+import axios from 'axios';
 
 interface AuthRequest extends Request {
   user?: {
@@ -316,5 +317,53 @@ export const addSharedReply = async (req: Request, res: Response): Promise<void>
     res.json(pdf);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add reply' });
+  }
+};
+
+export const proxyPdfFile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { fileId } = req.params;
+    
+    if (!fileId) {
+      res.status(400).json({ error: 'File ID is required' });
+      return;
+    }
+
+    const appwriteEndpoint = process.env.APPWRITE_ENDPOINT;
+    const appwriteProjectId = process.env.APPWRITE_PROJECT_ID;
+    const appwriteBucketId = process.env.APPWRITE_BUCKET_ID;
+    const appwriteApiKey = process.env.APPWRITE_API_KEY;
+    
+    if (!appwriteEndpoint || !appwriteProjectId || !appwriteBucketId || !appwriteApiKey) {
+      res.status(500).json({ error: 'Server configuration error' });
+      return;
+    }
+
+    const fileUrl = `${appwriteEndpoint}/storage/buckets/${appwriteBucketId}/files/${fileId}/view?project=${appwriteProjectId}`;
+    
+    try {
+      const response = await axios.get(fileUrl, {
+        responseType: 'arraybuffer',
+        headers: {
+          'X-Appwrite-Project': appwriteProjectId,
+          'X-Appwrite-Key': appwriteApiKey,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      // Set appropriate headers
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      
+      // Send the PDF data
+      res.send(response.data);
+    } catch (error) {
+      console.error('Failed to fetch PDF from Appwrite:', error);
+      res.status(404).json({ error: 'PDF file not found' });
+    }
+  } catch (error) {
+    console.error('PDF proxy error:', error);
+    res.status(500).json({ error: 'Failed to proxy PDF file' });
   }
 }; 

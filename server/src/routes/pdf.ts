@@ -11,7 +11,8 @@ import {
   generateShareLink,
   getSharedPDF,
   addSharedComment,
-  addSharedReply
+  addSharedReply,
+  proxyPdfFile
 } from '../controllers/pdfController';
 
 const router = express.Router();
@@ -31,9 +32,16 @@ const upload = multer({
   }
 });
 
+// Public routes
+router.get('/proxy/:fileId', proxyPdfFile);
+router.get('/shared/:token', getSharedPDF);
+router.post('/shared/:token/comments', addSharedComment);
+router.post('/shared/:token/comments/:commentId/replies', addSharedReply);
+
 // Protected routes
 router.use(auth);
 
+// PDF routes
 router.post('/upload', upload.single('pdf'), uploadPDF as RequestHandler);
 router.get('/', getPDFs as RequestHandler);
 router.get('/:id', getPDF as RequestHandler);
@@ -41,10 +49,5 @@ router.post('/:id/share', sharePDF as RequestHandler);
 router.post('/:id/comments', addComment as RequestHandler);
 router.post('/:id/comments/:commentId/replies', addReply as RequestHandler);
 router.post('/:id/share-link', generateShareLink as RequestHandler);
-
-// Public routes for shared PDFs
-router.get('/shared/:token', getSharedPDF as RequestHandler);
-router.post('/shared/:token/comments', addSharedComment as RequestHandler);
-router.post('/shared/:token/comments/:commentId/replies', addSharedReply as RequestHandler);
 
 export default router; 

@@ -17,6 +17,7 @@ import {
   DialogActions,
   Snackbar,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfService } from '../services/api';
@@ -24,7 +25,7 @@ import { useAuth } from '../contexts/AuthContext';
 import ShareIcon from '@mui/icons-material/Share';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
 interface Comment {
   _id: string;
@@ -55,17 +56,36 @@ const PDFViewer = () => {
   const [shareLink, setShareLink] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(true);
 
+  // Try to fetch and create a direct object URL for the PDF
+  const [directPdfUrl, setDirectPdfUrl] = useState<string | null>(null);
+  
   useEffect(() => {
     loadPDF();
   }, [id]);
 
   const loadPDF = async () => {
     try {
+      setPdfLoading(true);
+      setPdfError(null);
       const data = await pdfService.getOne(id!);
       setPdf(data);
     } catch (error) {
       console.error('Failed to load PDF:', error);
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handlePdfLoadError = (error: Error) => {
+    console.error('Error loading PDF:', error);
+    setPdfError(`Failed to load PDF: ${error.message || 'Unknown error'}`);
+    setPdfLoading(false);
+    
+    if (pdf?.fileUrl) {
+      console.log('Attempted to load PDF from:', getPdfUrl(pdf.fileUrl));
     }
   };
 
@@ -90,15 +110,6 @@ const PDFViewer = () => {
     }
   };
 
-  const handleShare = async (email: string) => {
-    try {
-      await pdfService.share(id!, email);
-      // Show success message
-    } catch (error) {
-      console.error('Failed to share PDF:', error);
-    }
-  };
-
   const handleShareClick = async () => {
     try {
       const link = await pdfService.generateShareLink(id!);
@@ -117,6 +128,54 @@ const PDFViewer = () => {
     setSnackbarOpen(true);
   };
 
+  const getFileIdFromUrl = (url: string): string | null => {
+    const matches = url.match(/\/files\/([^\/]+)\/view/);
+    return matches ? matches[1] : null;
+  };
+
+  const getPdfUrl = (fileUrl: string): string => {
+    const fileId = getFileIdFromUrl(fileUrl);
+    if (fileId) {
+      return `/api/pdf/proxy/${fileId}`;
+    }
+    return fileUrl;
+  };
+
+  useEffect(() => {
+    if (pdf?.fileUrl) {
+      // Try to fetch the PDF directly as a blob
+      fetch(getPdfUrl(pdf.fileUrl))
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.blob();
+        })
+        .then(blob => {
+          // Create an object URL from the blob
+          const objectUrl = URL.createObjectURL(blob);
+          setDirectPdfUrl(objectUrl);
+          console.log('Created direct PDF object URL:', objectUrl);
+        })
+        .catch(error => {
+          console.error('Failed to create direct PDF URL:', error);
+        });
+    }
+    
+    // Clean up object URL when component unmounts or PDF changes
+    return () => {
+      if (directPdfUrl) {
+        URL.revokeObjectURL(directPdfUrl);
+      }
+    };
+  }, [pdf]);
+
+  useEffect(() => {
+    if (pdf?.fileUrl) {
+      console.log('PDF URL:', getPdfUrl(pdf.fileUrl));
+    }
+  }, [pdf]);
+
   return (
     <Container>
       <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 3 }}>
@@ -131,31 +190,56 @@ const PDFViewer = () => {
               Share
             </Button>
           </Box>
-          {pdf && (
+          {pdfLoading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}>
+              <CircularProgress />
+            </Box>
+          )}
+          {pdfError && (
+            <Box sx={{ textAlign: 'center', my: 5 }}>
+              <Typography color="error">{pdfError}</Typography>
+              <Button 
+                variant="outlined" 
+                sx={{ mt: 2 }}
+                onClick={loadPDF}
+              >
+                Retry
+              </Button>
+            </Box>
+          )}
+          {pdf && !pdfLoading && !pdfError && (
             <Document
-              file={`http://localhost:5000/${pdf.path}`}
-              onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+              file={directPdfUrl || (pdf.fileUrl ? getPdfUrl(pdf.fileUrl) : undefined)}
+              onLoadSuccess={({ numPages }) => {
+                setNumPages(numPages);
+                setPdfLoading(false);
+              }}
+              onLoadError={handlePdfLoadError}
+              loading={<CircularProgress />}
+              error={<Typography color="error">Failed to load PDF</Typography>}
             >
               <Page pageNumber={pageNumber} />
             </Document>
           )}
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-            <Button
-              disabled={pageNumber <= 1}
-              onClick={() => setPageNumber(pageNumber - 1)}
-            >
-              Previous
-            </Button>
-            <Typography sx={{ mx: 2 }}>
-              Page {pageNumber} of {numPages}
-            </Typography>
-            <Button
-              disabled={pageNumber >= (numPages || 1)}
-              onClick={() => setPageNumber(pageNumber + 1)}
-            >
-              Next
-            </Button>
-          </Box>
+          {numPages && (
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+              <Button
+                disabled={pageNumber <= 1}
+                onClick={() => setPageNumber(pageNumber - 1)}
+              >
+                Previous
+              </Button>
+              <Typography sx={{ mx: 2 }}>
+                Page {pageNumber} of {numPages}
+              </Typography>
+              <Button
+                disabled={pageNumber >= (numPages || 1)}
+                onClick={() => setPageNumber(pageNumber + 1)}
+              >
+                Next
+              </Button>
+            </Box>
+          )}
         </Paper>
         <Paper elevation={3} sx={{ p: 2 }}>
           <Typography variant="h6" gutterBottom>
