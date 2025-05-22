@@ -108,6 +108,32 @@
   color: #2563eb;
 }
 
+.password-field-container {
+  position: relative;
+  width: 100%;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #4a5568;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.password-toggle:hover {
+  background: #f1f5f9;
+  color: #2563eb;
+}
+
 @media (max-width: 768px) {
   .login-container {
     padding: 1rem;

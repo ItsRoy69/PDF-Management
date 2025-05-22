@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { pdfService } from '../services/api';
 import Topbar from '../components/Topbar/Topbar';
@@ -40,7 +40,6 @@ const SharedPDF = () => {
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(true);
   const [emailVerificationOpen, setEmailVerificationOpen] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,7 +63,6 @@ const SharedPDF = () => {
       setPdf(data);
       
       if (email) {
-        setEmailVerified(true);
         setEmailVerificationOpen(false);
       }
     } catch (error: any) {

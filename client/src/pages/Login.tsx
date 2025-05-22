@@ -55,7 +55,7 @@ const Login = () => {
                 <div className="error-message">{formik.errors.email}</div>
               )}
             </div>
-            <div>
+            <div className="password-field-container">
               <input
                 className={`input-field ${formik.touched.password && formik.errors.password ? 'error' : ''}`}
                 name="password"
@@ -64,6 +64,13 @@ const Login = () => {
                 value={formik.values.password}
                 onChange={formik.handleChange}
               />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
               {formik.touched.password && formik.errors.password && (
                 <div className="error-message">{formik.errors.password}</div>
               )}

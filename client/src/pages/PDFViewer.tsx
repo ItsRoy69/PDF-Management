@@ -61,7 +61,6 @@ const PDFViewer = () => {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteEmails, setInviteEmails] = useState<string[]>([]);
-  const [tabValue, setTabValue] = useState(0);
   const [invitedUsers, setInvitedUsers] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
@@ -253,23 +252,6 @@ const PDFViewer = () => {
       setSnackbarMessage('Failed to invite users');
       setSnackbarOpen(true);
     }
-  };
-
-  const handleRemoveInvitedUser = async (email: string) => {
-    try {
-      await pdfService.removeInvitedUser(id!, email);
-      setInvitedUsers(invitedUsers.filter(e => e !== email));
-      setSnackbarMessage('User removed successfully');
-      setSnackbarOpen(true);
-    } catch (error) {
-      console.error('Failed to remove invited user:', error);
-      setSnackbarMessage('Failed to remove user');
-      setSnackbarOpen(true);
-    }
-  };
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
   };
 
   return (
