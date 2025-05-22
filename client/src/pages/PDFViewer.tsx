@@ -34,6 +34,8 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import EmailIcon from '@mui/icons-material/Email';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import Topbar from '../components/Topbar/Topbar';
+import '../styles/PDFViewer.css';
 
 // Use local worker
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -273,287 +275,210 @@ const PDFViewer = () => {
   };
 
   return (
-    <Container>
-      <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 3 }}>
-        <Paper elevation={3} sx={{ p: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h5">{pdf?.title}</Typography>
-            <Box>
-              <Button
-                variant="contained"
-                startIcon={<ShareIcon />}
-                onClick={handleShareClick}
-                sx={{ mr: 1 }}
-              >
-                Share Link
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<PersonAddIcon />}
-                onClick={handleInviteClick}
-                sx={{ mr: 1 }}
-              >
-                Invite Users
-              </Button>
-              {pdfError && (
-                <Button
-                  variant="outlined"
-                  startIcon={<RefreshIcon />}
-                  onClick={loadPDF}
-                >
-                  Retry
-                </Button>
-              )}
-            </Box>
-          </Box>
-          {pdfLoading && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}>
-              <CircularProgress />
-            </Box>
-          )}
-          {pdfError && (
-            <Box sx={{ textAlign: 'center', my: 5 }}>
-              <Typography color="error" gutterBottom>
-                {pdfError}
-              </Typography>
-              <Button 
-                variant="contained"
-                startIcon={<PictureAsPdfIcon />}
-                onClick={handleOpenPdf}
-                sx={{ mt: 2 }}
-              >
-                Open PDF in New Tab
-              </Button>
-            </Box>
-          )}
-          {pdf && !pdfLoading && !pdfError && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 500 }}>
-              <Button 
-                variant="contained" 
-                size="large" 
-                startIcon={<PictureAsPdfIcon />}
-                onClick={handleOpenPdf}
-                sx={{ py: 2, px: 4 }}
-              >
-                Open PDF in New Tab
-              </Button>
-            </Box>
-          )}
-        </Paper>
-        <Paper elevation={3} sx={{ p: 2 }}>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tabs value={tabValue} onChange={handleTabChange}>
-              <Tab label="Comments" />
-              <Tab label="Invited Users" />
-            </Tabs>
-          </Box>
-          
-          {tabValue === 0 && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Comments
-              </Typography>
-              <Box sx={{ mb: 2 }}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Add a comment..."
-                />
-                <Button
-                  variant="contained"
-                  onClick={handleAddComment}
-                  sx={{ mt: 1 }}
-                >
-                  Add Comment
-                </Button>
-              </Box>
-              <List>
+    <>
+      <Topbar />
+      <div className="pdf-viewer-container">
+        <div className="pdf-viewer-header">
+          <h1 className="pdf-viewer-title">{pdf?.title}</h1>
+          <div className="pdf-viewer-controls">
+            <button className="pdf-viewer-button" onClick={handleShareClick}>
+              <ShareIcon /> Share Link
+            </button>
+            <button className="pdf-viewer-button" onClick={handleInviteClick}>
+              <PersonAddIcon /> Invite Users
+            </button>
+            {pdfError && (
+              <button className="pdf-viewer-button secondary" onClick={loadPDF}>
+                <RefreshIcon /> Retry
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="pdf-viewer-grid">
+          <div className="pdf-viewer-card">
+            {pdfLoading && (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+                <div className="loading-spinner"></div>
+              </div>
+            )}
+            {pdfError && (
+              <div style={{ textAlign: 'center', padding: '2rem' }}>
+                <p style={{ color: '#dc2626', marginBottom: '1rem' }}>{pdfError}</p>
+                <button className="pdf-viewer-button" onClick={handleOpenPdf}>
+                  <PictureAsPdfIcon /> Open PDF in New Tab
+                </button>
+              </div>
+            )}
+            {pdf && !pdfLoading && !pdfError && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '500px' }}>
+                <button className="pdf-viewer-button" onClick={handleOpenPdf}>
+                  <PictureAsPdfIcon /> Open PDF in New Tab
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="pdf-viewer-card">
+            <div className="comments-section">
+              <h2 className="comments-title">Comments</h2>
+              <textarea
+                className="comment-input"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Add a comment..."
+              />
+              <button className="pdf-viewer-button" onClick={handleAddComment}>
+                Add Comment
+              </button>
+
+              <ul className="comment-list">
                 {pdf?.comments.map((comment: Comment) => (
-                  <React.Fragment key={comment._id}>
-                    <ListItem>
-                      <ListItemText
-                        primary={comment.text}
-                        secondary={`${comment.user.name} - ${new Date(
-                          comment.createdAt
-                        ).toLocaleString()}`}
-                      />
-                    </ListItem>
+                  <li key={comment._id} className="comment-item">
+                    <p className="comment-text">{comment.text}</p>
+                    <p className="comment-meta">
+                      {comment.user.name} - {new Date(comment.createdAt).toLocaleString()}
+                    </p>
                     {comment.replies.map((reply, index) => (
-                      <ListItem key={index} sx={{ pl: 4 }}>
-                        <ListItemText
-                          primary={reply.text}
-                          secondary={`${reply.user.name} - ${new Date(
-                            reply.createdAt
-                          ).toLocaleString()}`}
-                        />
-                      </ListItem>
+                      <div key={index} className="reply-section">
+                        <p className="comment-text">{reply.text}</p>
+                        <p className="comment-meta">
+                          {reply.user.name} - {new Date(reply.createdAt).toLocaleString()}
+                        </p>
+                      </div>
                     ))}
                     {selectedComment === comment._id ? (
-                      <Box sx={{ pl: 4 }}>
-                        <TextField
-                          fullWidth
-                          multiline
-                          rows={2}
+                      <div className="reply-section">
+                        <textarea
+                          className="comment-input"
                           value={reply}
                           onChange={(e) => setReply(e.target.value)}
                           placeholder="Add a reply..."
                         />
-                        <Button
-                          variant="contained"
-                          onClick={() => handleAddReply(comment._id)}
-                          sx={{ mt: 1 }}
-                        >
+                        <button className="pdf-viewer-button" onClick={() => handleAddReply(comment._id)}>
                           Add Reply
-                        </Button>
-                      </Box>
+                        </button>
+                      </div>
                     ) : (
-                      <Button
-                        onClick={() => setSelectedComment(comment._id)}
-                        sx={{ pl: 4 }}
-                      >
+                      <button className="reply-button" onClick={() => setSelectedComment(comment._id)}>
                         Reply
-                      </Button>
+                      </button>
                     )}
-                    <Divider />
-                  </React.Fragment>
+                  </li>
                 ))}
-              </List>
-            </Box>
-          )}
-          
-          {tabValue === 1 && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Invited Users
-              </Typography>
-              {invitedUsers.length > 0 ? (
-                <List>
-                  {invitedUsers.map((email) => (
-                    <ListItem 
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {shareDialogOpen && (
+          <div className="dialog-overlay">
+            <div className="dialog">
+              <h2 className="dialog-title">Share PDF</h2>
+              <div className="dialog-content">
+                <p>Share this link with others to give them access to this PDF:</p>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                  <input
+                    type="text"
+                    value={shareLink}
+                    readOnly
+                    style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                  />
+                  <button className="pdf-viewer-button" onClick={handleCopyLink}>
+                    <ContentCopyIcon /> Copy
+                  </button>
+                </div>
+              </div>
+              <div className="dialog-actions">
+                <button className="pdf-viewer-button secondary" onClick={() => setShareDialogOpen(false)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {inviteDialogOpen && (
+          <div className="dialog-overlay">
+            <div className="dialog">
+              <h2 className="dialog-title">Invite Users by Email</h2>
+              <div className="dialog-content">
+                <p>Enter email addresses to invite users to access this PDF:</p>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                  <input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="example@email.com"
+                    style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                  />
+                  <button className="pdf-viewer-button" onClick={handleAddEmail}>
+                    <EmailIcon /> Add
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem' }}>
+                  {inviteEmails.map(email => (
+                    <div
                       key={email}
-                      secondaryAction={
-                        <IconButton 
-                          edge="end" 
-                          aria-label="delete"
-                          onClick={() => handleRemoveInvitedUser(email)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      }
+                      style={{
+                        background: '#f1f5f9',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '9999px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
                     >
-                      <ListItemText 
-                        primary={email}
-                        secondary="Invited by email"
-                      />
-                    </ListItem>
+                      <span>{email}</span>
+                      <button
+                        onClick={() => handleRemoveEmail(email)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '0.25rem'
+                        }}
+                      >
+                        <DeleteIcon style={{ fontSize: '1rem' }} />
+                      </button>
+                    </div>
                   ))}
-                </List>
-              ) : (
-                <Typography variant="body1">
-                  No users have been invited by email yet.
-                </Typography>
-              )}
-              <Button
-                variant="contained"
-                startIcon={<PersonAddIcon />}
-                onClick={handleInviteClick}
-                sx={{ mt: 2 }}
-              >
-                Invite More Users
-              </Button>
-            </Box>
-          )}
-        </Paper>
-      </Box>
+                </div>
+              </div>
+              <div className="dialog-actions">
+                <button className="pdf-viewer-button secondary" onClick={() => setInviteDialogOpen(false)}>
+                  Cancel
+                </button>
+                <button
+                  className="pdf-viewer-button"
+                  onClick={handleInviteUsers}
+                  disabled={inviteEmails.length === 0}
+                >
+                  Invite
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-      <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)}>
-        <DialogTitle>Share PDF</DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" gutterBottom>
-            Share this link with others to give them access to this PDF:
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-            <TextField
-              fullWidth
-              value={shareLink}
-              InputProps={{ readOnly: true }}
-            />
-            <Button
-              startIcon={<ContentCopyIcon />}
-              onClick={handleCopyLink}
-              sx={{ ml: 1 }}
-            >
-              Copy
-            </Button>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShareDialogOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={inviteDialogOpen} onClose={() => setInviteDialogOpen(false)}>
-        <DialogTitle>Invite Users by Email</DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" gutterBottom>
-            Enter email addresses to invite users to access this PDF:
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Email Address"
-              type="email"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="example@email.com"
-            />
-            <Button
-              startIcon={<EmailIcon />}
-              onClick={handleAddEmail}
-              sx={{ ml: 1 }}
-            >
-              Add
-            </Button>
-          </Box>
-          <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {inviteEmails.map(email => (
-              <Chip 
-                key={email} 
-                label={email} 
-                onDelete={() => handleRemoveEmail(email)} 
-              />
-            ))}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setInviteDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleInviteUsers} 
-            variant="contained"
-            disabled={inviteEmails.length === 0}
+        {snackbarOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: '1rem',
+              right: '1rem',
+              background: '#10b981',
+              color: 'white',
+              padding: '1rem',
+              borderRadius: '8px',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+            }}
           >
-            Invite
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-      >
-        <Alert
-          onClose={() => setSnackbarOpen(false)}
-          severity="success"
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-    </Container>
+            {snackbarMessage}
+          </div>
+        )}
+      </div>
+    </>
   );
 };
 

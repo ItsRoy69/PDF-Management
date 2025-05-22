@@ -1,24 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
-import {
-  Container,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Box,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
-  CircularProgress,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from '@mui/material';
 import { pdfService } from '../services/api';
+import Topbar from '../components/Topbar/Topbar';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import '../styles/PDFViewer.css';
 
 interface Comment {
   _id: string;
@@ -163,152 +148,121 @@ const SharedPDF = () => {
   };
 
   return (
-    <Container>
-      <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 3 }}>
-        <Paper elevation={3} sx={{ p: 2 }}>
-          <Typography variant="h5" gutterBottom>
-            {pdf?.title}
-          </Typography>
-          {pdfLoading && !authError && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}>
-              <CircularProgress />
-            </Box>
-          )}
-          {pdfError && (
-            <Box sx={{ textAlign: 'center', my: 5 }}>
-              <Typography color="error">{pdfError}</Typography>
-              <Button 
-                variant="outlined" 
-                sx={{ mt: 2 }}
-                onClick={() => loadSharedPDF(guestEmail)}
-              >
-                Retry
-              </Button>
-            </Box>
-          )}
-          {pdf && !pdfLoading && !pdfError && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
-              <Button 
-                variant="contained" 
-                size="large" 
-                onClick={handleOpenPdf}
-                sx={{ py: 2, px: 4 }}
-              >
-                Open PDF in New Tab
-              </Button>
-            </Box>
-          )}
-        </Paper>
-        <Paper elevation={3} sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Comments
-          </Typography>
-          <Box sx={{ mb: 2 }}>
-            <TextField
-              fullWidth
-              label="Your Name"
-              value={guestName}
-              onChange={(e) => setGuestName(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              multiline
-              rows={2}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Add a comment..."
-            />
-            <Button
-              variant="contained"
-              onClick={handleAddComment}
-              sx={{ mt: 1 }}
-            >
-              Add Comment
-            </Button>
-          </Box>
-          <List>
-            {pdf?.comments.map((comment: Comment) => (
-              <React.Fragment key={comment._id}>
-                <ListItem>
-                  <ListItemText
-                    primary={comment.text}
-                    secondary={`${comment.user.name} - ${new Date(
-                      comment.createdAt
-                    ).toLocaleString()}`}
-                  />
-                </ListItem>
-                {comment.replies.map((reply, index) => (
-                  <ListItem key={index} sx={{ pl: 4 }}>
-                    <ListItemText
-                      primary={reply.text}
-                      secondary={`${reply.user.name} - ${new Date(
-                        reply.createdAt
-                      ).toLocaleString()}`}
-                    />
-                  </ListItem>
-                ))}
-                {selectedComment === comment._id ? (
-                  <Box sx={{ pl: 4 }}>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={2}
-                      value={reply}
-                      onChange={(e) => setReply(e.target.value)}
-                      placeholder="Add a reply..."
-                    />
-                    <Button
-                      variant="contained"
-                      onClick={() => handleAddReply(comment._id)}
-                      sx={{ mt: 1 }}
-                    >
-                      Add Reply
-                    </Button>
-                  </Box>
-                ) : (
-                  <Button
-                    onClick={() => setSelectedComment(comment._id)}
-                    sx={{ pl: 4 }}
-                  >
-                    Reply
-                  </Button>
-                )}
-                <Divider />
-              </React.Fragment>
-            ))}
-          </List>
-        </Paper>
-      </Box>
+    <>
+      <Topbar />
+      <div className="pdf-viewer-container">
+        <div className="pdf-viewer-grid">
+          <div className="pdf-viewer-card">
+            <h1 className="pdf-viewer-title">{pdf?.title}</h1>
+            {pdfLoading && !authError && (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+                <div className="loading-spinner"></div>
+              </div>
+            )}
+            {pdfError && (
+              <div style={{ textAlign: 'center', padding: '2rem' }}>
+                <p style={{ color: '#dc2626', marginBottom: '1rem' }}>{pdfError}</p>
+                <button className="pdf-viewer-button" onClick={() => loadSharedPDF(guestEmail)}>
+                  Retry
+                </button>
+              </div>
+            )}
+            {pdf && !pdfLoading && !pdfError && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+                <button className="pdf-viewer-button" onClick={handleOpenPdf}>
+                  <PictureAsPdfIcon /> Open PDF in New Tab
+                </button>
+              </div>
+            )}
+          </div>
 
-      <Dialog open={emailVerificationOpen} onClose={() => setEmailVerificationOpen(false)}>
-        <DialogTitle>Email Verification</DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" gutterBottom>
-            Please enter your email address to access this PDF.
-          </Typography>
-          {authError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {authError}
-            </Alert>
-          )}
-          <TextField
-            fullWidth
-            label="Email Address"
-            type="email"
-            value={guestEmail}
-            onChange={(e) => setGuestEmail(e.target.value)}
-            placeholder="example@email.com"
-            sx={{ mt: 2 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleVerifyEmail} variant="contained">
-            Verify
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+          <div className="pdf-viewer-card">
+            <div className="comments-section">
+              <h2 className="comments-title">Comments</h2>
+              <input
+                type="text"
+                className="comment-input"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                placeholder="Your Name"
+                style={{ marginBottom: '1rem' }}
+              />
+              <textarea
+                className="comment-input"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Add a comment..."
+              />
+              <button className="pdf-viewer-button" onClick={handleAddComment}>
+                Add Comment
+              </button>
+
+              <ul className="comment-list">
+                {pdf?.comments.map((comment: Comment) => (
+                  <li key={comment._id} className="comment-item">
+                    <p className="comment-text">{comment.text}</p>
+                    <p className="comment-meta">
+                      {comment.user.name} - {new Date(comment.createdAt).toLocaleString()}
+                    </p>
+                    {comment.replies.map((reply, index) => (
+                      <div key={index} className="reply-section">
+                        <p className="comment-text">{reply.text}</p>
+                        <p className="comment-meta">
+                          {reply.user.name} - {new Date(reply.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                    {selectedComment === comment._id ? (
+                      <div className="reply-section">
+                        <textarea
+                          className="comment-input"
+                          value={reply}
+                          onChange={(e) => setReply(e.target.value)}
+                          placeholder="Add a reply..."
+                        />
+                        <button className="pdf-viewer-button" onClick={() => handleAddReply(comment._id)}>
+                          Add Reply
+                        </button>
+                      </div>
+                    ) : (
+                      <button className="reply-button" onClick={() => setSelectedComment(comment._id)}>
+                        Reply
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {emailVerificationOpen && (
+          <div className="dialog-overlay">
+            <div className="dialog">
+              <h2 className="dialog-title">Email Verification</h2>
+              <div className="dialog-content">
+                <p>Please enter your email address to access this PDF.</p>
+                {authError && (
+                  <p style={{ color: '#dc2626', marginBottom: '1rem' }}>{authError}</p>
+                )}
+                <input
+                  type="email"
+                  className="comment-input"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  placeholder="example@email.com"
+                />
+              </div>
+              <div className="dialog-actions">
+                <button className="pdf-viewer-button" onClick={handleVerifyEmail}>
+                  Verify
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 };
 

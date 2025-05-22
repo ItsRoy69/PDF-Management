@@ -1,0 +1,224 @@
+.pdf-viewer-container {
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  padding-top: 5rem;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+}
+
+.pdf-viewer-header {
+  margin-bottom: 3rem;
+}
+
+.pdf-viewer-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #1a202c;
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.pdf-viewer-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pdf-viewer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+}
+
+.pdf-viewer-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1.5px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.pdf-viewer-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-color: #cbd5e1;
+}
+
+.pdf-viewer-button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.875rem 1.5rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pdf-viewer-button:hover {
+  background: #1d4ed8;
+}
+
+.pdf-viewer-button.secondary {
+  background: white;
+  color: #2563eb;
+  border: 1.5px solid #2563eb;
+}
+
+.pdf-viewer-button.secondary:hover {
+  background: #f8fafc;
+}
+
+.comments-section {
+  margin-top: 1.5rem;
+}
+
+.comments-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 1rem;
+}
+
+.comment-input {
+  width: 100%;
+  font-size: 1rem;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background: white;
+  transition: all 0.2s ease;
+  margin-bottom: 1rem;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.comment-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.comment-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.comment-item {
+  padding: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.comment-item:last-child {
+  border-bottom: none;
+}
+
+.comment-text {
+  font-size: 1rem;
+  color: #1a202c;
+  margin-bottom: 0.5rem;
+}
+
+.comment-meta {
+  font-size: 0.875rem;
+  color: #4a5568;
+}
+
+.reply-section {
+  margin-left: 2rem;
+  margin-top: 0.5rem;
+}
+
+.reply-button {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 0.5rem;
+}
+
+.reply-button:hover {
+  text-decoration: underline;
+}
+
+.dialog {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 500px;
+  width: 100%;
+}
+
+.dialog-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 1rem;
+}
+
+.dialog-content {
+  margin-bottom: 1.5rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .pdf-viewer-container {
+    padding: 1rem;
+    padding-top: 4rem;
+  }
+
+  .pdf-viewer-title {
+    font-size: 2rem;
+  }
+
+  .pdf-viewer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pdf-viewer-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+} 
