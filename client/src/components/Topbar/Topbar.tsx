@@ -1,14 +1,22 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import './Topbar.css';
 
 const APP_NAME = 'PDF Manager';
 
 const Topbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
   return (
@@ -23,12 +31,20 @@ const Topbar = () => {
         </button>
 
         <div className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
-          <Link to="/login" className="nav-link">
-            Login
-          </Link>
-          <Link to="/signup" className="nav-link signup">
-            Sign Up
-          </Link>
+          {isAuthenticated ? (
+            <button onClick={handleLogout} className="nav-link logout">
+              Logout
+            </button>
+          ) : (
+            <>
+              <Link to="/login" className="nav-link">
+                Login
+              </Link>
+              <Link to="/signup" className="nav-link signup">
+                Sign Up
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </nav>

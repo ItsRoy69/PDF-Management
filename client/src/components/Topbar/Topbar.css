@@ -38,6 +38,10 @@
   padding: 0.5rem 1rem;
   border-radius: 4px;
   transition: all 0.3s ease;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
 }
 
 .nav-link:hover {
@@ -51,6 +55,15 @@
 
 .nav-link.signup:hover {
   background-color: #0056b3;
+}
+
+.nav-link.logout {
+  color: #dc3545;
+}
+
+.nav-link.logout:hover {
+  background-color: #dc3545;
+  color: white;
 }
 
 .mobile-menu-button {
