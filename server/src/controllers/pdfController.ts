@@ -482,8 +482,9 @@ export const addSharedComment = async (req: Request, res: Response): Promise<voi
 
 export const addSharedReply = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { text, guestName, commentId } = req.body;
-    const pdf = await PDF.findOne({ shareToken: req.params.token });
+    const { text, guestName } = req.body;
+    const { token, commentId } = req.params;
+    const pdf = await PDF.findOne({ shareToken: token });
 
     if (!pdf) {
       res.status(404).json({ error: 'PDF not found' });

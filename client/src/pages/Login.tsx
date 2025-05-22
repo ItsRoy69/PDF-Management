@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -74,6 +74,13 @@ const Login = () => {
             error={formik.touched.password && Boolean(formik.errors.password)}
             helperText={formik.touched.password && formik.errors.password}
           />
+          <Box textAlign="right" mt={1}>
+            <RouterLink to="/forgot-password" style={{ textDecoration: 'none' }}>
+              <Link component="span" variant="body2">
+                Forgot password?
+              </Link>
+            </RouterLink>
+          </Box>
           <Button
             fullWidth
             variant="contained"
@@ -85,9 +92,11 @@ const Login = () => {
           </Button>
         </form>
         <Box mt={2} textAlign="center">
-          <Link href="/register" variant="body2">
-            Don't have an account? Register
-          </Link>
+          <RouterLink to="/register" style={{ textDecoration: 'none' }}>
+            <Link component="span" variant="body2">
+              Don't have an account? Register
+            </Link>
+          </RouterLink>
         </Box>
       </Paper>
     </Container>

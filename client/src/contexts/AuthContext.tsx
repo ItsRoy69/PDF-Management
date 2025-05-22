@@ -7,6 +7,9 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  forgotPassword: (email: string) => Promise<void>;
+  validateResetToken: (token: string) => Promise<boolean>;
+  resetPassword: (token: string, password: string) => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -52,8 +55,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAuthenticated(false);
   };
 
+  const forgotPassword = async (email: string) => {
+    await authService.forgotPassword(email);
+  };
+
+  const validateResetToken = async (token: string) => {
+    try {
+      await authService.validateResetToken(token);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const resetPassword = async (token: string, password: string) => {
+    const data = await authService.resetPassword(token, password);
+    setUser(data.user);
+    setToken(data.token);
+    setIsAuthenticated(true);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      login, 
+      register, 
+      logout, 
+      forgotPassword,
+      validateResetToken,
+      resetPassword,
+      isAuthenticated 
+    }}>
       {children}
     </AuthContext.Provider>
   );

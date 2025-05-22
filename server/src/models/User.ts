@@ -5,6 +5,8 @@ export interface IUser extends mongoose.Document {
   name: string;
   email: string;
   password: string;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -25,6 +27,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 6
+  },
+  resetPasswordToken: {
+    type: String,
+    default: null
+  },
+  resetPasswordExpires: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

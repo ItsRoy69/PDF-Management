@@ -39,6 +39,21 @@ export const authService = {
       throw error;
     }
   },
+
+  forgotPassword: async (email: string) => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  validateResetToken: async (token: string) => {
+    const response = await api.get(`/auth/reset-password/${token}`);
+    return response.data;
+  },
+
+  resetPassword: async (token: string, password: string) => {
+    const response = await api.post(`/auth/reset-password/${token}`, { password });
+    return response.data;
+  },
 };
 
 export const pdfService = {
