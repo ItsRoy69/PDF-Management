@@ -1,4 +1,4 @@
-.register-container {
+.login-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -9,12 +9,12 @@
     sans-serif;
 }
 
-.register-paper {
+.login-paper {
   width: 100%;
-  max-width: 500px;
+  max-width: 400px;
 }
 
-.register-title {
+.login-title {
   font-size: 2.5rem;
   font-weight: 800;
   color: #1a202c;
@@ -24,20 +24,10 @@
   text-align: center;
 }
 
-.register-form {
+.login-form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.form-field {
-  width: 100%;
 }
 
 .input-field {
@@ -65,23 +55,23 @@
   margin-top: 0.25rem;
 }
 
-.phone-input-container {
-  position: relative;
-  display: flex;
-  align-items: center;
+.forgot-password {
+  text-align: right;
+  margin-top: 0.5rem;
 }
 
-.phone-flag {
-  position: absolute;
-  left: 1rem;
-  font-size: 1rem;
+.forgot-password a {
+  color: #4a5568;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-.phone-input-container .input-field {
-  padding-left: 2.5rem;
+.forgot-password a:hover {
+  color: #2563eb;
 }
 
-.register-button {
+.login-button {
   width: 100%;
   padding: 0.875rem 2rem;
   font-size: 1rem;
@@ -95,44 +85,40 @@
   margin-top: 1rem;
 }
 
-.register-button:hover {
+.login-button:hover {
   background: #1d4ed8;
   transform: translateY(-1px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-.login-link {
+.register-link {
   text-align: center;
   margin-top: 1.5rem;
 }
 
-.login-link a {
+.register-link a {
   color: #4a5568;
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
 }
 
-.login-link a:hover {
+.register-link a:hover {
   color: #2563eb;
 }
 
 @media (max-width: 768px) {
-  .register-container {
+  .login-container {
     padding: 1rem;
     padding-top: 3rem;
   }
 
-  .register-paper {
+  .login-paper {
     padding: 1.5rem;
   }
 
-  .register-title {
+  .login-title {
     font-size: 2rem;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
   }
 } 

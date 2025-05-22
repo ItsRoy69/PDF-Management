@@ -2,16 +2,9 @@ import { useState } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import {
-  Container,
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Box,
-  Link,
-} from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
+import Topbar from '../components/Topbar/Topbar';
+import '../styles/Login.css';
 
 const validationSchema = Yup.object({
   email: Yup.string().email('Invalid email').required('Required'),
@@ -22,6 +15,7 @@ const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [error, setError] = useState<string>('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -42,64 +36,51 @@ const Login = () => {
   });
 
   return (
-    <Container maxWidth="sm">
-      <Paper elevation={3} sx={{ p: 4, mt: 8 }}>
-        <Typography variant="h4" align="center" gutterBottom>
-          Login
-        </Typography>
-        {error && (
-          <Typography color="error" align="center" sx={{ mb: 2 }}>
-            {error}
-          </Typography>
-        )}
-        <form onSubmit={formik.handleSubmit}>
-          <TextField
-            fullWidth
-            margin="normal"
-            name="email"
-            label="Email"
-            value={formik.values.email}
-            onChange={formik.handleChange}
-            error={formik.touched.email && Boolean(formik.errors.email)}
-            helperText={formik.touched.email && formik.errors.email}
-          />
-          <TextField
-            fullWidth
-            margin="normal"
-            name="password"
-            label="Password"
-            type="password"
-            value={formik.values.password}
-            onChange={formik.handleChange}
-            error={formik.touched.password && Boolean(formik.errors.password)}
-            helperText={formik.touched.password && formik.errors.password}
-          />
-          <Box textAlign="right" mt={1}>
-            <RouterLink to="/forgot-password" style={{ textDecoration: 'none' }}>
-              <Link component="span" variant="body2">
-                Forgot password?
-              </Link>
-            </RouterLink>
-          </Box>
-          <Button
-            fullWidth
-            variant="contained"
-            color="primary"
-            type="submit"
-            sx={{ mt: 3 }}
-          >
-            Login
-          </Button>
-        </form>
-        <Box mt={2} textAlign="center">
-          <RouterLink to="/register" style={{ textDecoration: 'none' }}>
-            <Link component="span" variant="body2">
-              Don't have an account? Register
-            </Link>
-          </RouterLink>
-        </Box>
-      </Paper>
-    </Container>
+    <>
+      <Topbar />
+      <div className="login-container">
+        <div className="login-paper">
+          <h1 className="login-title">Login</h1>
+          {error && <div className="error-message">{error}</div>}
+          <form className="login-form" onSubmit={formik.handleSubmit}>
+            <div>
+              <input
+                className={`input-field ${formik.touched.email && formik.errors.email ? 'error' : ''}`}
+                name="email"
+                placeholder="Email"
+                value={formik.values.email}
+                onChange={formik.handleChange}
+              />
+              {formik.touched.email && formik.errors.email && (
+                <div className="error-message">{formik.errors.email}</div>
+              )}
+            </div>
+            <div>
+              <input
+                className={`input-field ${formik.touched.password && formik.errors.password ? 'error' : ''}`}
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={formik.values.password}
+                onChange={formik.handleChange}
+              />
+              {formik.touched.password && formik.errors.password && (
+                <div className="error-message">{formik.errors.password}</div>
+              )}
+            </div>
+            <div className="forgot-password">
+              <RouterLink to="/forgot-password">Forgot password?</RouterLink>
+            </div>
+            <button className="login-button" type="submit">
+              Login
+            </button>
+          </form>
+          <div className="register-link">
+            <RouterLink to="/register">Don't have an account? Register</RouterLink>
+          </div>
+        </div>
+      </div>
+    </>
   );
 };
 

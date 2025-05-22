@@ -18,12 +18,10 @@ const Topbar = () => {
           {APP_NAME}
         </Link>
 
-        {/* Mobile menu button */}
         <button className="mobile-menu-button" onClick={toggleMenu}>
           <span className={`hamburger ${isMenuOpen ? 'open' : ''}`}></span>
         </button>
 
-        {/* Navigation links */}
         <div className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
           <Link to="/login" className="nav-link">
             Login
